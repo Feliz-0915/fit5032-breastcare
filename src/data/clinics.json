@@ -1,0 +1,8 @@
+[
+  { "id": 1, "name": "Melbourne Breast Clinic", "postcode": "3000", "free": true },
+  { "id": 2, "name": "Carlton Screening Centre", "postcode": "3053", "free": false },
+  { "id": 3, "name": "Southbank Health", "postcode": "3006", "free": true },
+  { "id": 4, "name": "Richmond Medical", "postcode": "3121", "free": false },
+  { "id": 5, "name": "Docklands Care", "postcode": "3008", "free": true },
+  { "id": 6, "name": "St Kilda Clinic", "postcode": "3182", "free": false }
+]
