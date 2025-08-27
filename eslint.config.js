@@ -24,5 +24,13 @@ export default defineConfig([
   js.configs.recommended,
   ...pluginVue.configs['flat/essential'],
   ...pluginOxlint.configs['flat/recommended'],
+
+  {
+    name: 'app/vue-rules',
+    rules: {
+      'vue/multi-word-component-names': ['error', { ignores: ['Home', 'Finder'] }],
+    },
+  },
+
   skipFormatting,
 ])
