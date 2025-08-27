@@ -6,17 +6,22 @@ const postcode = ref('')
 const freeOnly = ref(false)
 const sortBy = ref('name') // name | postcode
 
-// Read Last Screening from Local Storage (HINT Requirement)
+// Guard to avoid writing defaults back to LS during reset
+const isResetting = ref(false)
+
+// Read last filters from Local Storage (HINT Requirement)
 onMounted(() => {
   const saved = JSON.parse(localStorage.getItem('finderFilters') || '{}')
   postcode.value = saved.postcode || ''
   freeOnly.value = !!saved.freeOnly
   sortBy.value = saved.sortBy || 'name'
 })
-// Persistence screening conditions
+
+// Persist screening conditions (skip when resetting)
 watch(
   [postcode, freeOnly, sortBy],
   () => {
+    if (isResetting.value) return
     localStorage.setItem(
       'finderFilters',
       JSON.stringify({
@@ -28,6 +33,19 @@ watch(
   },
   { flush: 'post' },
 )
+
+// Reset filters + clear Local Storage
+function resetFilters() {
+  isResetting.value = true
+  postcode.value = ''
+  freeOnly.value = false
+  sortBy.value = 'name'
+  localStorage.removeItem('finderFilters')
+  // release the guard on the next frame so watch won't immediately write defaults back
+  requestAnimationFrame(() => {
+    isResetting.value = false
+  })
+}
 
 const filtered = computed(() => {
   const list = clinics.filter(
@@ -57,11 +75,23 @@ const filtered = computed(() => {
           <option value="postcode">Postcode</option>
         </select>
       </div>
+
+      <!-- Reset button -->
+      <div class="col-12 col-md-auto ms-auto text-end">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          @click="resetFilters"
+          title="Clear filters and local storage"
+        >
+          Reset filters
+        </button>
+      </div>
     </div>
 
     <div class="list-group">
       <div v-for="c in filtered" :key="c.id" class="list-group-item">
-        <strong>{{ c.name }}</strong> — {{ c.postcode }} ({{ c.free ? 'Free' : 'Paid' }})
+        <strong>{{ c.name }}</strong> - {{ c.postcode }} ({{ c.free ? 'Free' : 'Paid' }})
       </div>
       <div v-if="filtered.length === 0" class="text-muted px-2 py-3">
         No results. Try a different postcode.

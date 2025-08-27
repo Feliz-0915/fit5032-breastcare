@@ -81,7 +81,7 @@ function v(field) {
       ? ''
       : form.contactType === 'email'
         ? 'Enter a valid email.'
-        : 'Enter a valid phone (8–15 digits).'
+        : 'Enter a valid phone (8-15 digits).'
   if (field === 'preferredTime')
     errors.preferredTime = timeValid.value ? '' : 'Please choose a preferred time.'
   if (field === 'preferredDate')
