@@ -8,7 +8,7 @@ function readLS(key, fallback) {
   try {
     const v = JSON.parse(localStorage.getItem(key))
     return Array.isArray(v) ? v : fallback
-  } catch {
+  } catch (e) {
     return fallback
   }
 }
@@ -18,7 +18,7 @@ watch(
   (arr) => {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(arr ?? []))
-    } catch {}
+    } catch (e) {}
   },
   { deep: true },
 )
@@ -27,7 +27,7 @@ if (typeof window !== 'undefined') {
     if (e.key !== LS_KEY) return
     try {
       enquiries.value = e.newValue ? JSON.parse(e.newValue) : []
-    } catch {
+    } catch (err) {
       enquiries.value = []
     }
   })
@@ -36,9 +36,6 @@ if (typeof window !== 'undefined') {
 function latestForClinic(id) {
   const list = enquiries.value.filter((e) => String(e.clinicId) === String(id))
   return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null
-}
-function clearForClinic(id) {
-  enquiries.value = enquiries.value.filter((e) => String(e.clinicId) !== String(id))
 }
 
 const form = reactive({
@@ -153,9 +150,9 @@ function submit() {
   })
   alert('Enquiry saved locally (demo only).')
 }
+
 function clearSavedForSelectedClinic() {
   if (!form.clinicId) return
-  clearForClinic(form.clinicId)
   form.name = ''
   form.contactType = 'email'
   form.contact = ''
@@ -164,7 +161,7 @@ function clearSavedForSelectedClinic() {
   form.message = ''
   form.consent = false
   Object.keys(errors).forEach((k) => (errors[k] = ''))
-  alert('Cleared saved enquiry for this clinic.')
+  alert('Form cleared (saved enquiries unchanged).')
 }
 
 function loadEnquiry(idx) {
@@ -314,9 +311,9 @@ function deleteEnquiry(idx) {
           :class="errors.consent && 'is-invalid'"
           @change="v('consent')"
         />
-        <label for="consent" class="form-check-label"
-          >I understand this demo stores my enquiry locally in this browser.</label
-        >
+        <label for="consent" class="form-check-label">
+          I understand this demo stores my enquiry locally in this browser.
+        </label>
         <div class="invalid-feedback">{{ errors.consent }}</div>
       </div>
 
@@ -328,7 +325,7 @@ function deleteEnquiry(idx) {
           @click="clearSavedForSelectedClinic"
           :disabled="!form.clinicId"
         >
-          Clear saved data for this clinic
+          Reset form
         </button>
       </div>
     </form>
