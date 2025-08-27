@@ -1,10 +1,14 @@
 <template>
   <div>
     <h5 class="mb-2">Saved Filters</h5>
-    <form @submit.prevent="saveCurrent" class="d-flex gap-2 mb-3">
+
+    <div class="d-flex gap-2 mb-3">
       <input v-model.trim="label" placeholder="Label this filter..." class="form-control" />
-      <button class="btn btn-sm btn-primary">Save</button>
-    </form>
+      <button class="btn btn-sm btn-primary" @click="saveWithLabel" :disabled="!label">Save</button>
+      <button class="btn btn-sm btn-outline-primary" @click="quickSave" :disabled="isDuplicate">
+        Quick Save
+      </button>
+    </div>
 
     <div v-if="items.length === 0" class="text-muted">No saved filters.</div>
     <ul v-else class="list-group">
@@ -32,9 +36,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 
-const props = defineProps({
-  current: { type: Object, required: true }, // expects { postcode, freeOnly, sortBy }
-})
+const props = defineProps({ current: { type: Object, required: true } })
 const emit = defineEmits(['load'])
 
 const LS_KEY = 'finderSavedFiltersV2'
@@ -60,8 +62,9 @@ const itemsSorted = computed(() =>
   [...items.value].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
 )
 
-const label = ref('')
-
+function pickFields(x) {
+  return { postcode: x.postcode || '', freeOnly: !!x.freeOnly, sortBy: x.sortBy || 'name' }
+}
 function eq(a, b) {
   return (
     String(a.postcode || '') === String(b.postcode || '') &&
@@ -70,20 +73,43 @@ function eq(a, b) {
   )
 }
 
-function pickFields(x) {
-  return { postcode: x.postcode || '', freeOnly: !!x.freeOnly, sortBy: x.sortBy || 'name' }
+const isDuplicate = computed(() => {
+  const curr = pickFields(props.current)
+  return items.value.some((it) => eq(it, curr))
+})
+
+function makeAutoLabel() {
+  const p = props.current.postcode || 'Any'
+  const f = props.current.freeOnly ? 'Free only' : 'All'
+  const s = props.current.sortBy || 'name'
+  return `${p} - ${p}, ${f}, sort: ${s}`
 }
 
-function saveCurrent() {
+const label = ref('')
+
+function save(payload) {
+  const existIdx = items.value.findIndex((it) => eq(it, payload))
+  if (existIdx !== -1) items.value.splice(existIdx, 1)
+  items.value.push(payload)
+}
+
+function saveWithLabel() {
   const payload = {
     label: label.value,
     ...pickFields(props.current),
     createdAt: new Date().toISOString(),
   }
-  const existIdx = items.value.findIndex((it) => eq(it, payload))
-  if (existIdx !== -1) items.value.splice(existIdx, 1)
-  items.value.push(payload)
+  save(payload)
   label.value = ''
+}
+
+function quickSave() {
+  const payload = {
+    label: makeAutoLabel(),
+    ...pickFields(props.current),
+    createdAt: new Date().toISOString(),
+  }
+  save(payload)
 }
 
 function remove(idx) {
