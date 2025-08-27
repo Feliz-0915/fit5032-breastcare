@@ -1,41 +1,56 @@
 <script setup>
-import { reactive, computed, onMounted, watch } from 'vue'
-import clinics from '../data/clinics.json' // Dynamic data (B.2)
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import clinics from '../data/clinics.json'
+
 const LS_KEY = 'enquiriesV1'
 
-function loadAll() {
+function readLS(key, fallback) {
   try {
-    const raw = localStorage.getItem(LS_KEY)
-    const arr = raw ? JSON.parse(raw) : []
-    return Array.isArray(arr) ? arr : []
+    const v = JSON.parse(localStorage.getItem(key))
+    return Array.isArray(v) ? v : fallback
   } catch {
-    return []
+    return fallback
   }
 }
-function saveAll(arr) {
-  localStorage.setItem(LS_KEY, JSON.stringify(arr || []))
+const enquiries = ref(readLS(LS_KEY, []))
+watch(
+  enquiries,
+  (arr) => {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(arr ?? []))
+    } catch {}
+  },
+  { deep: true },
+)
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== LS_KEY) return
+    try {
+      enquiries.value = e.newValue ? JSON.parse(e.newValue) : []
+    } catch {
+      enquiries.value = []
+    }
+  })
 }
+
 function latestForClinic(id) {
-  const list = loadAll().filter((e) => String(e.clinicId) === String(id))
+  const list = enquiries.value.filter((e) => String(e.clinicId) === String(id))
   return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null
 }
 function clearForClinic(id) {
-  const arr = loadAll().filter((e) => String(e.clinicId) !== String(id))
-  saveAll(arr)
+  enquiries.value = enquiries.value.filter((e) => String(e.clinicId) !== String(id))
 }
 
-// ------- Form data -------
 const form = reactive({
-  clinicId: '', // Choosing a clinic
+  clinicId: '',
   name: '',
-  contactType: 'email', // 'email' | 'phone'
+  contactType: 'email',
   contact: '',
-  preferredTime: '', // 'Morning' | 'Afternoon' | 'Evening'
-  preferredDate: '', // Optional: YYYYY-MM-DD (not earlier than today)
+  preferredTime: '',
+  preferredDate: '',
   message: '',
   consent: false,
 })
-
 const errors = reactive({
   clinicId: '',
   name: '',
@@ -46,7 +61,6 @@ const errors = reactive({
   consent: '',
 })
 
-// ------- Calibration rules (B.1 Multiple)-------
 const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v || '')
 const phoneOk = (v) => /^\+?\d{8,15}$/.test((v || '').replace(/\s+/g, ''))
 const minLen = (v, n) => (v || '').trim().length >= n
@@ -61,7 +75,6 @@ const timeValid = computed(() => !!form.preferredTime)
 const dateValid = computed(() => !form.preferredDate || form.preferredDate >= todayStr)
 const msgValid = computed(() => minLen(form.message, 20))
 const agreeValid = computed(() => !!form.consent)
-
 const allValid = computed(
   () =>
     clinicValid.value &&
@@ -121,14 +134,12 @@ onMounted(() => {
   if (clinics.length && !form.clinicId) form.clinicId = String(clinics[0].id)
 })
 
-// ------- Submit / Clear -------
 function submit() {
   ;['clinicId', 'name', 'contact', 'preferredTime', 'preferredDate', 'message', 'consent'].forEach(
     v,
   )
   if (!allValid.value) return
-  const arr = loadAll()
-  arr.push({
+  enquiries.value.push({
     clinicId: String(form.clinicId),
     clinicName: clinics.find((c) => String(c.id) === String(form.clinicId))?.name || '',
     postcode: clinics.find((c) => String(c.id) === String(form.clinicId))?.postcode || '',
@@ -140,14 +151,11 @@ function submit() {
     message: form.message,
     createdAt: new Date().toISOString(),
   })
-  saveAll(arr)
   alert('Enquiry saved locally (demo only).')
 }
-
 function clearSavedForSelectedClinic() {
   if (!form.clinicId) return
   clearForClinic(form.clinicId)
-  // Empty forms at the same time (retain selected clinics)
   form.name = ''
   form.contactType = 'email'
   form.contact = ''
@@ -157,6 +165,22 @@ function clearSavedForSelectedClinic() {
   form.consent = false
   Object.keys(errors).forEach((k) => (errors[k] = ''))
   alert('Cleared saved enquiry for this clinic.')
+}
+
+function loadEnquiry(idx) {
+  const e = enquiries.value[idx]
+  if (!e) return
+  form.clinicId = String(e.clinicId)
+  form.name = e.name || ''
+  form.contactType = e.contactType || 'email'
+  form.contact = e.contact || ''
+  form.preferredTime = e.preferredTime || ''
+  form.preferredDate = e.preferredDate || ''
+  form.message = e.message || ''
+  form.consent = true
+}
+function deleteEnquiry(idx) {
+  enquiries.value.splice(idx, 1)
 }
 </script>
 
@@ -168,7 +192,6 @@ function clearSavedForSelectedClinic() {
     </p>
 
     <form @submit.prevent="submit" novalidate class="row g-3">
-      <!-- Clinic selection (from clinics.json) -->
       <div class="col-md-6">
         <label class="form-label" for="clinic">Clinic</label>
         <select
@@ -183,7 +206,7 @@ function clearSavedForSelectedClinic() {
             {{ c.name }} ({{ c.postcode }})
           </option>
         </select>
-        <div class="invalid-feedback" aria-live="polite">{{ errors.clinicId }}</div>
+        <div class="invalid-feedback">{{ errors.clinicId }}</div>
       </div>
 
       <div class="col-md-6">
@@ -195,10 +218,9 @@ function clearSavedForSelectedClinic() {
           :class="errors.name && 'is-invalid'"
           @blur="v('name')"
         />
-        <div class="invalid-feedback" aria-live="polite">{{ errors.name }}</div>
+        <div class="invalid-feedback">{{ errors.name }}</div>
       </div>
 
-      <!-- Contact type switching (dynamic calibration) -->
       <div class="col-md-6">
         <label class="form-label">Contact method</label>
         <div class="d-flex gap-3">
@@ -237,7 +259,7 @@ function clearSavedForSelectedClinic() {
           :class="errors.contact && 'is-invalid'"
           @blur="v('contact')"
         />
-        <div class="invalid-feedback" aria-live="polite">{{ errors.contact }}</div>
+        <div class="invalid-feedback">{{ errors.contact }}</div>
       </div>
 
       <div class="col-md-6">
@@ -254,7 +276,7 @@ function clearSavedForSelectedClinic() {
           <option value="Afternoon">Afternoon</option>
           <option value="Evening">Evening</option>
         </select>
-        <div class="invalid-feedback" aria-live="polite">{{ errors.preferredTime }}</div>
+        <div class="invalid-feedback">{{ errors.preferredTime }}</div>
       </div>
 
       <div class="col-md-6">
@@ -267,7 +289,7 @@ function clearSavedForSelectedClinic() {
           :class="errors.preferredDate && 'is-invalid'"
           @blur="v('preferredDate')"
         />
-        <div class="invalid-feedback" aria-live="polite">{{ errors.preferredDate }}</div>
+        <div class="invalid-feedback">{{ errors.preferredDate }}</div>
       </div>
 
       <div class="col-12">
@@ -280,7 +302,7 @@ function clearSavedForSelectedClinic() {
           :class="errors.message && 'is-invalid'"
           @blur="v('message')"
         ></textarea>
-        <div class="invalid-feedback" aria-live="polite">{{ errors.message }}</div>
+        <div class="invalid-feedback">{{ errors.message }}</div>
       </div>
 
       <div class="col-12 form-check">
@@ -292,10 +314,10 @@ function clearSavedForSelectedClinic() {
           :class="errors.consent && 'is-invalid'"
           @change="v('consent')"
         />
-        <label for="consent" class="form-check-label">
-          I understand this demo stores my enquiry locally in this browser.
-        </label>
-        <div class="invalid-feedback" aria-live="polite">{{ errors.consent }}</div>
+        <label for="consent" class="form-check-label"
+          >I understand this demo stores my enquiry locally in this browser.</label
+        >
+        <div class="invalid-feedback">{{ errors.consent }}</div>
       </div>
 
       <div class="col-12 d-flex flex-wrap gap-2">
@@ -310,5 +332,26 @@ function clearSavedForSelectedClinic() {
         </button>
       </div>
     </form>
+
+    <hr class="my-4" />
+    <h5 class="mb-3">Saved Enquiries</h5>
+    <div v-if="enquiries.length === 0" class="text-muted">No saved enquiries yet.</div>
+    <ul v-else class="list-group">
+      <li
+        v-for="(e, idx) in enquiries"
+        :key="idx"
+        class="list-group-item d-flex justify-content-between align-items-center gap-2 flex-wrap"
+      >
+        <div class="small">
+          <strong>{{ e.clinicName }}</strong> ({{ e.postcode }}) - {{ e.name }} |
+          {{ e.contactType }}: {{ e.contact }} | {{ e.preferredTime }} {{ e.preferredDate || '' }} |
+          {{ new Date(e.createdAt).toLocaleString() }}
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-primary" @click="loadEnquiry(idx)">Load</button>
+          <button class="btn btn-sm btn-outline-danger" @click="deleteEnquiry(idx)">Delete</button>
+        </div>
+      </li>
+    </ul>
   </section>
 </template>
