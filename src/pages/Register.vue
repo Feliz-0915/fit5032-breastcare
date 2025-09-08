@@ -48,14 +48,6 @@
         <div class="form-text">At least 8 chars, include upper/lower/digit.</div>
       </div>
 
-      <div class="mb-4">
-        <label class="form-label">Role</label>
-        <select v-model="role" class="form-select">
-          <option value="user">User</option>
-          <option value="admin">Admin (demo)</option>
-        </select>
-      </div>
-
       <button class="btn btn-success w-100" :disabled="loading">
         {{ loading ? 'Creating…' : 'Create account' }}
       </button>
@@ -79,7 +71,6 @@ const { register } = useAuth()
 const name = ref('')
 const email = ref('')
 const password = ref('')
-const role = ref('user')
 const showPw = ref(false)
 const loading = ref(false)
 const error = ref('')
@@ -93,7 +84,6 @@ async function onSubmit() {
       name: name.value?.trim(),
       email: email.value?.trim(),
       password: password.value,
-      role: role.value,
     }
     await register(payload)
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'

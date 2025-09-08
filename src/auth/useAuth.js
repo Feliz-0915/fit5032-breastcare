@@ -29,11 +29,19 @@ async function pbkdf2(password, saltUint8, iterations = 100000, hash = 'SHA-256'
   )
   return new Uint8Array(bits)
 }
+function normalizeRole(r) {
+  const v = String(r || '')
+    .trim()
+    .toLowerCase()
+  if (v === 'admin') return 'Admin'
+  return 'User'
+}
 
 function readUsers() {
   try {
     const arr = JSON.parse(localStorage.getItem(USERS_KEY))
-    return Array.isArray(arr) ? arr : []
+    const list = Array.isArray(arr) ? arr : []
+    return list.map((u) => ({ ...u, role: normalizeRole(u.role) }))
   } catch {
     return []
   }
@@ -59,22 +67,23 @@ const session = ref(readSession())
 let listenersBound = false
 
 export function useAuth() {
-  const currentUser = computed(() => {
-    if (!session.value) return null
-    return users.value.find((u) => u.id === session.value.userId) ?? null
-  })
+  const currentUser = computed(() =>
+    !session.value ? null : (users.value.find((u) => u.id === session.value.userId) ?? null),
+  )
   const isAuthenticated = computed(() => !!currentUser.value)
 
   function hasRole(...roles) {
     const u = currentUser.value
     if (!u) return false
-    return roles.includes(u.role)
+    const my = normalizeRole(u.role)
+    return roles.map(normalizeRole).includes(my)
   }
   function requireRoles(allowed) {
     const u = currentUser.value
     if (!u) return false
     if (!allowed || !allowed.length) return true
-    return allowed.includes(u.role)
+    const my = normalizeRole(u.role)
+    return allowed.map(normalizeRole).includes(my)
   }
 
   if (!listenersBound && typeof window !== 'undefined') {
@@ -103,42 +112,35 @@ export function useAuth() {
     }
   }
 
-  async function register({ email, password, name, role = 'user' }) {
+  async function register({ email, password, name }) {
     validateEmailFormat(email)
     ensureEmailUnique(email)
     validatePassword(password)
-
     const salt = rndBytes(16)
     const hashBytes = await pbkdf2(password, salt)
-
     const user = {
       id: crypto.randomUUID(),
       email: email.trim(),
       name: (name ?? '').trim() || email.split('@')[0],
-      role,
+      role: 'User',
       salt: bufToHex(salt),
       hash: bufToHex(hashBytes),
       createdAt: new Date().toISOString(),
     }
     users.value = [...users.value, user]
     saveUsers(users.value)
-
     const token = bufToHex(rndBytes(16))
     session.value = { userId: user.id, token, loggedAt: Date.now() }
     saveSession(session.value)
-
     return user
   }
 
   async function login({ email, password }) {
     const user = users.value.find((u) => u.email.toLowerCase() === email.toLowerCase())
     if (!user) throw new Error('Invalid email or password')
-
     const salt = hexToBuf(user.salt)
     const hashBytes = await pbkdf2(password, salt)
-    const computed = bufToHex(hashBytes)
-    if (computed !== user.hash) throw new Error('Invalid email or password')
-
+    if (bufToHex(hashBytes) !== user.hash) throw new Error('Invalid email or password')
     const token = bufToHex(rndBytes(16))
     session.value = { userId: user.id, token, loggedAt: Date.now() }
     saveSession(session.value)
@@ -152,6 +154,34 @@ export function useAuth() {
 
   watch(users, (v) => saveUsers(v), { deep: true })
 
+  async function ensureSeedAdmin(email, password) {
+    if (!email || !password) throw new Error('Admin seed not configured')
+    let admin = users.value.find((u) => u.email.toLowerCase() === String(email).toLowerCase())
+    if (!admin) {
+      const salt = rndBytes(16)
+      const hashBytes = await pbkdf2(password, salt)
+      admin = {
+        id: crypto.randomUUID(),
+        email: email.trim(),
+        name: 'Admin',
+        role: 'Admin',
+        salt: bufToHex(salt),
+        hash: bufToHex(hashBytes),
+        createdAt: new Date().toISOString(),
+      }
+      users.value = [...users.value, admin]
+      saveUsers(users.value)
+      console.log('Seed admin created:', email)
+    } else {
+      if (normalizeRole(admin.role) !== 'Admin') {
+        admin.role = 'Admin'
+        saveUsers(users.value)
+      }
+      console.log('Seed admin exists:', email)
+    }
+    return { email }
+  }
+
   return {
     users,
     currentUser,
@@ -161,5 +191,6 @@ export function useAuth() {
     register,
     login,
     logout,
+    ensureSeedAdmin,
   }
 }
