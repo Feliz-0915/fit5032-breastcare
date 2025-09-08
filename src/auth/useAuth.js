@@ -3,7 +3,6 @@ import { ref, computed, watch } from 'vue'
 const USERS_KEY = 'app_users_v1'
 const SESSION_KEY = 'app_session_v1'
 
-// utils
 function strToBuf(str) {
   return new TextEncoder().encode(str)
 }
@@ -31,7 +30,6 @@ async function pbkdf2(password, saltUint8, iterations = 100000, hash = 'SHA-256'
   return new Uint8Array(bits)
 }
 
-// storage helpers
 function readUsers() {
   try {
     const arr = JSON.parse(localStorage.getItem(USERS_KEY))
@@ -56,30 +54,45 @@ function saveSession(s) {
   else localStorage.setItem(SESSION_KEY, JSON.stringify(s))
 }
 
-// core API
-export function useAuth() {
-  const users = ref(readUsers())
-  const session = ref(readSession())
+const users = ref(readUsers())
+const session = ref(readSession())
+let listenersBound = false
 
+export function useAuth() {
   const currentUser = computed(() => {
     if (!session.value) return null
     return users.value.find((u) => u.id === session.value.userId) ?? null
   })
   const isAuthenticated = computed(() => !!currentUser.value)
 
-  // cross-tab sync
-  if (typeof window !== 'undefined') {
+  function hasRole(...roles) {
+    const u = currentUser.value
+    if (!u) return false
+    return roles.includes(u.role)
+  }
+  function requireRoles(allowed) {
+    const u = currentUser.value
+    if (!u) return false
+    if (!allowed || !allowed.length) return true
+    return allowed.includes(u.role)
+  }
+
+  if (!listenersBound && typeof window !== 'undefined') {
     window.addEventListener('storage', (e) => {
       if (e.key === USERS_KEY) users.value = readUsers()
       if (e.key === SESSION_KEY) session.value = readSession()
     })
+    listenersBound = true
   }
 
   function ensureEmailUnique(email) {
     const exists = users.value.some((u) => u.email.toLowerCase() === email.toLowerCase())
     if (exists) throw new Error('Email already registered')
   }
-
+  function validateEmailFormat(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!re.test(email)) throw new Error('Invalid email format')
+  }
   function validatePassword(pw) {
     const okLen = pw.length >= 8
     const hasUpper = /[A-Z]/.test(pw)
@@ -91,6 +104,7 @@ export function useAuth() {
   }
 
   async function register({ email, password, name, role = 'user' }) {
+    validateEmailFormat(email)
     ensureEmailUnique(email)
     validatePassword(password)
 
@@ -112,6 +126,7 @@ export function useAuth() {
     const token = bufToHex(rndBytes(16))
     session.value = { userId: user.id, token, loggedAt: Date.now() }
     saveSession(session.value)
+
     return user
   }
 
@@ -137,5 +152,14 @@ export function useAuth() {
 
   watch(users, (v) => saveUsers(v), { deep: true })
 
-  return { users, currentUser, isAuthenticated, register, login, logout }
+  return {
+    users,
+    currentUser,
+    isAuthenticated,
+    hasRole,
+    requireRoles,
+    register,
+    login,
+    logout,
+  }
 }
