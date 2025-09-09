@@ -26,8 +26,11 @@
           <li class="nav-item">
             <RouterLink class="nav-link" to="/form">Form</RouterLink>
           </li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/reviews">Reviews</RouterLink>
+          </li>
 
-          <li class="nav-item" v-if="hasRole('Admin')">
+          <li class="nav-item" v-if="hasRole('admin')">
             <RouterLink class="nav-link" to="/admin">Admin</RouterLink>
           </li>
         </ul>
