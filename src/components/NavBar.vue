@@ -29,8 +29,7 @@
           <li class="nav-item">
             <RouterLink class="nav-link" to="/reviews">Reviews</RouterLink>
           </li>
-
-          <li class="nav-item" v-if="hasRole('admin')">
+          <li class="nav-item">
             <RouterLink class="nav-link" to="/admin">Admin</RouterLink>
           </li>
         </ul>
@@ -41,8 +40,6 @@
 
 <script setup>
 import { RouterLink } from 'vue-router'
-import { useAuth } from '../auth/useAuth'
-const { hasRole } = useAuth()
 </script>
 
 <style scoped>
