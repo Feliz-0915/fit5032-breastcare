@@ -7,7 +7,13 @@
     <form @submit.prevent="onSubmit" novalidate>
       <div class="mb-3">
         <label class="form-label">Name (optional)</label>
-        <input v-model.trim="name" type="text" class="form-control" autocomplete="name" />
+        <input
+          v-model.trim="name"
+          type="text"
+          class="form-control"
+          autocomplete="name"
+          maxlength="40"
+        />
       </div>
 
       <div class="mb-3">
@@ -75,9 +81,23 @@ const showPw = ref(false)
 const loading = ref(false)
 const error = ref('')
 
+function validate() {
+  const errs = []
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.value)) errs.push('Invalid email')
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$/.test(password.value))
+    errs.push('Password must include upper, lower and digit')
+  if (name.value && name.value.length > 40) errs.push('Name too long')
+  if (errs.length) {
+    error.value = errs.join(' | ')
+    return false
+  }
+  return true
+}
+
 async function onSubmit() {
   if (loading.value) return
   error.value = ''
+  if (!validate()) return
   loading.value = true
   try {
     const payload = {
@@ -86,7 +106,10 @@ async function onSubmit() {
       password: password.value,
     }
     await register(payload)
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    const redirect =
+      typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
+        ? route.query.redirect
+        : '/'
     router.replace(redirect)
   } catch (e) {
     error.value = e?.message || 'Registration failed'
