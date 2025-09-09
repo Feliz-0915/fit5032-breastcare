@@ -10,10 +10,8 @@ const NotFound = () => import('../pages/NotFound.vue')
 import Login from '../pages/Login.vue'
 import Register from '../pages/Register.vue'
 import Protected from '../pages/Protected.vue'
-
 import Admin from '../pages/Admin.vue'
 import AccessDenied from '../pages/AccessDenied.vue'
-
 import Reviews from '../pages/Reviews.vue'
 
 const routes = [
