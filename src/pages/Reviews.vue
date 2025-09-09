@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card mb-4">
       <div class="card-body">
         <h6 class="mb-3">Your rating</h6>
 
@@ -29,11 +29,7 @@
           <button class="btn btn-primary btn-sm ms-3" @click="save" :disabled="saving">
             {{ saving ? 'Saving…' : 'Save' }}
           </button>
-          <div class="form-text mt-2">
-            You can change your score at any time; the average updates instantly.
-          </div>
         </div>
-
         <div v-else>
           <p class="mb-2">You must be logged in to rate.</p>
           <RouterLink
@@ -47,6 +43,36 @@
             >Register</RouterLink
           >
         </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h6 class="mb-3">Comments</h6>
+
+        <div v-if="user">
+          <textarea
+            v-model="newComment"
+            class="form-control mb-2"
+            rows="2"
+            placeholder="Write your comment here..."
+          ></textarea>
+          <button class="btn btn-success btn-sm" @click="addComment" :disabled="!newComment.trim()">
+            Post Comment
+          </button>
+        </div>
+        <div v-else>
+          <p class="mb-2">You must be logged in to comment.</p>
+        </div>
+
+        <div v-if="comments.length" class="mt-3">
+          <div v-for="(c, i) in comments" :key="i" class="border rounded p-2 mb-2">
+            <strong>{{ c.author }}</strong
+            >:
+            <div class="mt-1">{{ c.text }}</div>
+          </div>
+        </div>
+        <div v-else class="text-muted mt-3">No comments yet.</div>
       </div>
     </div>
   </main>
@@ -69,7 +95,6 @@ const avg = ref(0)
 const count = ref(0)
 const saving = ref(false)
 
-// derived value to visualize average with stars (rounded)
 const displayAvg = computed(() => Math.round(avg.value))
 
 watchEffect(() => {
@@ -92,4 +117,16 @@ function save() {
 }
 
 function noop() {}
+
+const comments = ref([])
+const newComment = ref('')
+
+function addComment() {
+  if (!newComment.value.trim()) return
+  comments.value.unshift({
+    author: user.value?.email || 'Anonymous',
+    text: newComment.value.trim(),
+  })
+  newComment.value = ''
+}
 </script>
