@@ -23,7 +23,6 @@
     <div class="card mb-4">
       <div class="card-body">
         <h6 class="mb-3">Your rating</h6>
-
         <div v-if="user">
           <StarRating v-model="my" />
           <button class="btn btn-primary btn-sm ms-3" @click="save" :disabled="saving">
@@ -52,40 +51,89 @@
 
         <div v-if="user">
           <textarea
-            v-model="newComment"
-            class="form-control mb-2"
-            rows="2"
+            v-model.trim="newComment"
+            class="form-control"
+            rows="3"
             placeholder="Write your comment here..."
+            maxlength="300"
           ></textarea>
-          <div v-if="commentError" class="text-danger mb-2">{{ commentError }}</div>
-          <button class="btn btn-success btn-sm" @click="addComment" :disabled="savingComment">
-            {{ savingComment ? 'Posting…' : 'Post Comment' }}
-          </button>
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <small class="text-muted">{{ newComment.length }}/300</small>
+            <button
+              class="btn btn-success btn-sm"
+              @click="postComment"
+              :disabled="!canPost || posting"
+            >
+              {{ posting ? 'Posting…' : 'Post Comment' }}
+            </button>
+          </div>
+          <div v-if="commentError" class="text-danger mt-2">{{ commentError }}</div>
         </div>
         <div v-else>
           <p class="mb-2">You must be logged in to comment.</p>
         </div>
 
-        <div v-if="comments.length" class="mt-3">
-          <div v-for="(c, i) in comments" :key="i" class="border rounded p-2 mb-2">
-            <strong>{{ c.author }}</strong
-            >:
-            <div class="mt-1" v-text="c.text"></div>
-          </div>
-        </div>
-        <div v-else class="text-muted mt-3">No comments yet.</div>
+        <hr class="my-3" />
+
+        <div v-if="commentsSorted.length === 0" class="text-muted">No comments yet.</div>
+
+        <ul class="list-unstyled m-0">
+          <li v-for="c in commentsSorted" :key="c.id" class="py-3 border-bottom">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="me-3 flex-grow-1">
+                <div class="fw-semibold">
+                  {{ c.authorEmail }}
+                  <span class="text-muted fw-normal ms-2" style="font-size: 0.9rem">
+                    · {{ formatDate(c.updatedAt || c.createdAt)
+                    }}<span v-if="c.updatedAt"> (edited)</span>
+                  </span>
+                </div>
+
+                <div v-if="editingId === c.id" class="mt-2">
+                  <textarea
+                    v-model.trim="editText"
+                    class="form-control"
+                    rows="3"
+                    maxlength="300"
+                  ></textarea>
+                  <div class="d-flex gap-2 mt-2">
+                    <button
+                      class="btn btn-primary btn-sm"
+                      @click="saveEdit(c)"
+                      :disabled="savingEdit"
+                    >
+                      {{ savingEdit ? 'Saving…' : 'Save' }}
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" @click="cancelEdit">
+                      Cancel
+                    </button>
+                  </div>
+                  <div v-if="editError" class="text-danger mt-2">{{ editError }}</div>
+                </div>
+
+                <p v-else class="mb-0 mt-2" v-text="c.text"></p>
+              </div>
+
+              <div v-if="canManage(c)" class="d-flex gap-2">
+                <button class="btn btn-outline-secondary btn-sm" @click="startEdit(c)">Edit</button>
+                <button class="btn btn-outline-danger btn-sm" @click="remove(c.id)">Delete</button>
+              </div>
+            </div>
+          </li>
+        </ul>
       </div>
     </div>
   </main>
 </template>
 
 <script setup>
-import { computed, ref, watchEffect } from 'vue'
+import { computed, ref, watchEffect, onMounted, watch } from 'vue'
 import StarRating from '../components/StarRating.vue'
 import { useAuth } from '../auth/useAuth'
 import { useRatings } from '../data/useRatings'
 
 const ASPECT_ID = 'app_experience'
+const COMMENTS_KEY = 'reviews_comments_v1'
 
 const { currentUser } = useAuth()
 const { getAverage, getCount, getUserRating, setRating } = useRatings()
@@ -95,7 +143,6 @@ const my = ref(0)
 const avg = ref(0)
 const count = ref(0)
 const saving = ref(false)
-
 const displayAvg = computed(() => Math.round(avg.value))
 
 watchEffect(() => {
@@ -121,8 +168,12 @@ function noop() {}
 
 const comments = ref([])
 const newComment = ref('')
+const posting = ref(false)
 const commentError = ref('')
-const savingComment = ref(false)
+const editingId = ref(null)
+const editText = ref('')
+const savingEdit = ref(false)
+const editError = ref('')
 
 function isUnsafe(input) {
   const htmlOrScript = /<\s*\/?\s*\w+[^>]*>|<\s*script|on\w+\s*=|javascript:/i
@@ -139,7 +190,14 @@ function sanitize(input) {
     .replaceAll("'", '&#39;')
 }
 
-function addComment() {
+const canPost = computed(() => {
+  const t = newComment.value.trim()
+  if (t.length === 0 || t.length > 300) return false
+  if (isUnsafe(t)) return false
+  return true
+})
+
+function postComment() {
   commentError.value = ''
   const trimmed = newComment.value.trim()
   if (trimmed.length === 0) {
@@ -151,16 +209,114 @@ function addComment() {
     return
   }
   if (isUnsafe(trimmed)) {
-    commentError.value = 'Invalid input detected (HTML/Script/SQL-like patterns are not allowed).'
+    commentError.value = 'Invalid input detected.'
     return
   }
-  savingComment.value = true
+  posting.value = true
   const safe = sanitize(trimmed)
   comments.value.unshift({
-    author: user.value?.email || 'Anonymous',
+    id: crypto.randomUUID(),
+    authorId: user.value?.id ?? '',
+    authorEmail: user.value?.email ?? 'Anonymous',
     text: safe,
+    createdAt: Date.now(),
+    updatedAt: null,
   })
   newComment.value = ''
-  savingComment.value = false
+  posting.value = false
 }
+
+function canManage(c) {
+  if (!user.value) return false
+  if (user.value.role === 'admin') return true
+  return c.authorId === user.value.id
+}
+
+function startEdit(c) {
+  if (!canManage(c)) return
+  editingId.value = c.id
+  editText.value = decodeForEdit(c.text)
+  editError.value = ''
+}
+
+function cancelEdit() {
+  editingId.value = null
+  editText.value = ''
+  savingEdit.value = false
+  editError.value = ''
+}
+
+function decodeForEdit(safeHtml) {
+  return safeHtml
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#39;', "'")
+    .replaceAll('&amp;', '&')
+}
+
+function saveEdit(c) {
+  editError.value = ''
+  const t = editText.value.trim()
+  if (t.length === 0) {
+    editError.value = 'Comment cannot be empty.'
+    return
+  }
+  if (t.length > 300) {
+    editError.value = 'Comment is too long (max 300 chars).'
+    return
+  }
+  if (isUnsafe(t)) {
+    editError.value = 'Invalid input detected.'
+    return
+  }
+  savingEdit.value = true
+  const idx = comments.value.findIndex((x) => x.id === c.id)
+  if (idx !== -1) {
+    comments.value[idx] = {
+      ...comments.value[idx],
+      text: sanitize(t),
+      updatedAt: Date.now(),
+    }
+  }
+  savingEdit.value = false
+  cancelEdit()
+}
+
+function remove(id) {
+  const idx = comments.value.findIndex((x) => x.id === id)
+  if (idx !== -1) comments.value.splice(idx, 1)
+}
+
+const commentsSorted = computed(() =>
+  [...comments.value].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+)
+
+function formatDate(ts) {
+  try {
+    return new Date(ts).toLocaleString()
+  } catch {
+    return ''
+  }
+}
+
+onMounted(() => {
+  try {
+    const raw = localStorage.getItem(COMMENTS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) comments.value = parsed
+    }
+  } catch {}
+})
+
+watch(
+  comments,
+  (v) => {
+    try {
+      localStorage.setItem(COMMENTS_KEY, JSON.stringify(v))
+    } catch {}
+  },
+  { deep: true },
+)
 </script>
