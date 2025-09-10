@@ -1,6 +1,6 @@
 <template>
   <section class="text-center">
-    <h1 class="display-6 fw-bold mb-3">BreastCare App (V1)</h1>
+    <h1 class="display-6 fw-bold mb-3">BreastCare App (V2)</h1>
     <p class="text-muted mb-4">Vue 3 + Bootstrap · BR A/B/C demo</p>
 
     <!-- feature navigation -->
