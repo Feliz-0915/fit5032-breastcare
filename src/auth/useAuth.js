@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 const USERS_KEY = 'app_users_v1'
 const SESSION_KEY = 'app_session_v1'
@@ -67,6 +68,8 @@ const session = ref(readSession())
 let listenersBound = false
 
 export function useAuth() {
+  const router = useRouter()
+
   const currentUser = computed(() =>
     !session.value ? null : (users.value.find((u) => u.id === session.value.userId) ?? null),
   )
@@ -150,6 +153,7 @@ export function useAuth() {
   function logout() {
     session.value = null
     saveSession(null)
+    router.push('/')
   }
 
   watch(users, (v) => saveUsers(v), { deep: true })
