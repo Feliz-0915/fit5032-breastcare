@@ -25,7 +25,7 @@
           required
           autocomplete="email"
           inputmode="email"
-          pattern="^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+          pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
           title="Please enter a valid email address (e.g., name@example.com)"
         />
         <div class="form-text">Format: name@example.com</div>
@@ -54,6 +54,30 @@
         <div class="form-text">At least 8 chars, include upper/lower/digit.</div>
       </div>
 
+      <!-- Confirm Password -->
+      <div class="mb-3">
+        <label class="form-label">Confirm Password</label>
+        <div class="input-group">
+          <input
+            :type="showPw2 ? 'text' : 'password'"
+            v-model="confirmPassword"
+            class="form-control"
+            required
+            autocomplete="new-password"
+            minlength="8"
+          />
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            @click="showPw2 = !showPw2"
+            :aria-pressed="showPw2 ? 'true' : 'false'"
+          >
+            {{ showPw2 ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+        <div class="form-text">Re-enter the same password.</div>
+      </div>
+
       <button class="btn btn-success w-100" :disabled="loading">
         {{ loading ? 'Creating…' : 'Create account' }}
       </button>
@@ -77,15 +101,18 @@ const { register } = useAuth()
 const name = ref('')
 const email = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 const showPw = ref(false)
+const showPw2 = ref(false)
 const loading = ref(false)
 const error = ref('')
 
 function validate() {
   const errs = []
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.value)) errs.push('Invalid email')
-  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$/.test(password.value))
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) errs.push('Invalid email')
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password.value))
     errs.push('Password must include upper, lower and digit')
+  if (password.value !== confirmPassword.value) errs.push('Passwords do not match')
   if (name.value && name.value.length > 40) errs.push('Name too long')
   if (errs.length) {
     error.value = errs.join(' | ')
