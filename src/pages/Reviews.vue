@@ -57,8 +57,9 @@
             rows="2"
             placeholder="Write your comment here..."
           ></textarea>
-          <button class="btn btn-success btn-sm" @click="addComment" :disabled="!newComment.trim()">
-            Post Comment
+          <div v-if="commentError" class="text-danger mb-2">{{ commentError }}</div>
+          <button class="btn btn-success btn-sm" @click="addComment" :disabled="savingComment">
+            {{ savingComment ? 'Posting…' : 'Post Comment' }}
           </button>
         </div>
         <div v-else>
@@ -69,7 +70,7 @@
           <div v-for="(c, i) in comments" :key="i" class="border rounded p-2 mb-2">
             <strong>{{ c.author }}</strong
             >:
-            <div class="mt-1">{{ c.text }}</div>
+            <div class="mt-1" v-text="c.text"></div>
           </div>
         </div>
         <div v-else class="text-muted mt-3">No comments yet.</div>
@@ -120,13 +121,46 @@ function noop() {}
 
 const comments = ref([])
 const newComment = ref('')
+const commentError = ref('')
+const savingComment = ref(false)
+
+function isUnsafe(input) {
+  const htmlOrScript = /<\s*\/?\s*\w+[^>]*>|<\s*script|on\w+\s*=|javascript:/i
+  const sqlish = /('|--|;|\/\*|\bunion\b|\bselect\b|\bdrop\b|\bor\b\s*1\s*=\s*1)/i
+  return htmlOrScript.test(input) || sqlish.test(input)
+}
+
+function sanitize(input) {
+  return input
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
 
 function addComment() {
-  if (!newComment.value.trim()) return
+  commentError.value = ''
+  const trimmed = newComment.value.trim()
+  if (trimmed.length === 0) {
+    commentError.value = 'Comment is required.'
+    return
+  }
+  if (trimmed.length > 300) {
+    commentError.value = 'Comment is too long (max 300 chars).'
+    return
+  }
+  if (isUnsafe(trimmed)) {
+    commentError.value = 'Invalid input detected (HTML/Script/SQL-like patterns are not allowed).'
+    return
+  }
+  savingComment.value = true
+  const safe = sanitize(trimmed)
   comments.value.unshift({
     author: user.value?.email || 'Anonymous',
-    text: newComment.value.trim(),
+    text: safe,
   })
   newComment.value = ''
+  savingComment.value = false
 }
 </script>
