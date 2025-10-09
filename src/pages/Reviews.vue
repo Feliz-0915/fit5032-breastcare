@@ -135,10 +135,9 @@ import { useRatings } from '../data/useRatings'
 const ASPECT_ID = 'app_experience'
 const COMMENTS_KEY = 'reviews_comments_v1'
 
-const { currentUser } = useAuth()
+const { user } = useAuth()
 const { getAverage, getCount, getUserRating, setRating } = useRatings()
 
-const user = currentUser
 const my = ref(0)
 const avg = ref(0)
 const count = ref(0)
@@ -148,17 +147,17 @@ const displayAvg = computed(() => Math.round(avg.value))
 watchEffect(() => {
   avg.value = getAverage(ASPECT_ID)
   count.value = getCount(ASPECT_ID)
-  if (user.value) {
-    my.value = getUserRating(ASPECT_ID, user.value.id)
+  if (user) {
+    my.value = getUserRating(ASPECT_ID, user.id)
   } else {
     my.value = 0
   }
 })
 
 function save() {
-  if (!user.value || !my.value) return
+  if (!user || !my.value) return
   saving.value = true
-  setRating(ASPECT_ID, user.value.id, my.value)
+  setRating(ASPECT_ID, user.id, my.value)
   avg.value = getAverage(ASPECT_ID)
   count.value = getCount(ASPECT_ID)
   saving.value = false
@@ -216,8 +215,8 @@ function postComment() {
   const safe = sanitize(trimmed)
   comments.value.unshift({
     id: crypto.randomUUID(),
-    authorId: user.value?.id ?? '',
-    authorEmail: user.value?.email ?? 'Anonymous',
+    authorId: user?.id ?? '',
+    authorEmail: user?.email ?? 'Anonymous',
     text: safe,
     createdAt: Date.now(),
     updatedAt: null,
@@ -227,9 +226,9 @@ function postComment() {
 }
 
 function canManage(c) {
-  if (!user.value) return false
-  if (user.value.role === 'admin') return true
-  return c.authorId === user.value.id
+  if (!user) return false
+  if (user.role === 'admin') return true
+  return c.authorId === user.id
 }
 
 function startEdit(c) {

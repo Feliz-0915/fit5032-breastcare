@@ -1,41 +1,40 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuth } from '../auth/useAuth'
+import { getAuth, onAuthStateChanged } from 'firebase/auth'
 
 const Home = () => import('../pages/Home.vue')
 const SelfCheck = () => import('../pages/SelfCheck.vue')
 const Finder = () => import('../pages/Finder.vue')
 const UserForm = () => import('../components/UserForm.vue')
+const Reviews = () => import('../pages/Reviews.vue')
+const Login = () => import('../pages/Login.vue')
+const Register = () => import('../pages/Register.vue')
+const Admin = () => import('../pages/Admin.vue')
+const AccessDenied = () => import('../pages/AccessDenied.vue')
+const Protected = () => import('../pages/Protected.vue')
 const NotFound = () => import('../pages/NotFound.vue')
-
-import Login from '../pages/Login.vue'
-import Register from '../pages/Register.vue'
-import Protected from '../pages/Protected.vue'
-import Admin from '../pages/Admin.vue'
-import AccessDenied from '../pages/AccessDenied.vue'
-import Reviews from '../pages/Reviews.vue'
 
 const routes = [
   { path: '/', name: 'home', component: Home },
   { path: '/selfcheck', component: SelfCheck },
   { path: '/finder', component: Finder },
   { path: '/form', component: UserForm },
-
-  { path: '/reviews', name: 'reviews', component: Reviews },
-
-  { path: '/login', name: 'login', component: Login, meta: { guestOnly: true } },
+  { path: '/reviews', name: 'reviews', component: Reviews, meta: { requiresAuth: true } },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('../pages/Login.vue'),
+    meta: { guestOnly: true },
+  },
   { path: '/register', name: 'register', component: Register, meta: { guestOnly: true } },
-  { path: '/protected', name: 'protected', component: Protected, meta: { requiresAuth: true } },
-
   {
     path: '/admin',
     name: 'admin',
     component: Admin,
     meta: { requiresAuth: true, roles: ['admin'] },
   },
-
   { path: '/denied', name: 'denied', component: AccessDenied },
-
-  { path: '/:pathMatch(.*)*', component: NotFound },
+  { path: '/protected', component: Protected, meta: { requiresAuth: true } },
+  { path: '/:pathMatch(.*)*', name: 'notfound', component: NotFound },
 ]
 
 const router = createRouter({
@@ -44,23 +43,48 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
-router.beforeEach((to) => {
-  const { isAuthenticated, requireRoles } = useAuth()
+function getCurrentUser() {
+  return new Promise((resolve) => {
+    const auth = getAuth()
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe()
+      resolve(user)
+    })
+  })
+}
 
-  if (to.meta.requiresAuth && !isAuthenticated.value) {
+router.beforeEach(async (to) => {
+  const user = await getCurrentUser()
+  const email = user?.email || null
+
+  console.log('[ROUTER GUARD] To:', to.fullPath)
+  console.log('→ currentUser:', email)
+
+  if (to.meta.requiresAuth && !user) {
+    console.log('→ Not logged in, go to login page')
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  if (to.meta.roles && to.meta.roles.length) {
-    if (!requireRoles(to.meta.roles)) {
-      return { name: 'denied' }
+  if (to.meta.guestOnly && user) {
+    if (to.name === 'login' && to.query.mode === 'admin') {
+      return true
     }
-  }
-
-  if (to.meta.guestOnly && isAuthenticated.value) {
     return { name: 'home' }
   }
 
+  if (to.meta.roles?.includes('admin')) {
+    const isAdmin =
+      email?.endsWith('@admin.com') || email === 'admin@demo.local' || email === 'abc@test.com'
+
+    console.log('→ Checking roles: isAdmin =', isAdmin)
+
+    if (!isAdmin) {
+      console.warn('→ Non-administrator, jump AccessDenied')
+      return { name: 'denied', replace: true }
+    }
+  }
+
+  console.log('→ Access is via')
   return true
 })
 
