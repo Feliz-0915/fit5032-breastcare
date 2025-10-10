@@ -13,8 +13,6 @@
         </p>
 
         <div class="d-flex justify-content-center gap-3">
-          <button class="btn btn-primary" @click="goToAdminLogin">Go to Admin Login</button>
-
           <RouterLink to="/" class="btn btn-outline-secondary"> Back to Home </RouterLink>
         </div>
       </div>

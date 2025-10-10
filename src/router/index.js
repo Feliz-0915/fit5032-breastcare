@@ -12,6 +12,7 @@ const Admin = () => import('../pages/Admin.vue')
 const AccessDenied = () => import('../pages/AccessDenied.vue')
 const Protected = () => import('../pages/Protected.vue')
 const NotFound = () => import('../pages/NotFound.vue')
+const Email = () => import('../pages/Email.vue')
 
 const routes = [
   { path: '/', name: 'home', component: Home },
@@ -19,19 +20,34 @@ const routes = [
   { path: '/finder', component: Finder },
   { path: '/form', component: UserForm },
   { path: '/reviews', name: 'reviews', component: Reviews, meta: { requiresAuth: true } },
+
   {
     path: '/login',
     name: 'login',
-    component: () => import('../pages/Login.vue'),
+    component: Login,
     meta: { guestOnly: true },
   },
-  { path: '/register', name: 'register', component: Register, meta: { guestOnly: true } },
+  {
+    path: '/register',
+    name: 'register',
+    component: Register,
+    meta: { guestOnly: true },
+  },
+
   {
     path: '/admin',
     name: 'admin',
     component: Admin,
     meta: { requiresAuth: true, roles: ['admin'] },
   },
+
+  {
+    path: '/email',
+    name: 'email',
+    component: Email,
+    meta: { requiresAdmin: true },
+  },
+
   { path: '/denied', name: 'denied', component: AccessDenied },
   { path: '/protected', component: Protected, meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: 'notfound', component: NotFound },
@@ -61,30 +77,27 @@ router.beforeEach(async (to) => {
   console.log('→ currentUser:', email)
 
   if (to.meta.requiresAuth && !user) {
-    console.log('→ Not logged in, go to login page')
+    console.log('→ Not logged in, redirecting to login page')
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
   if (to.meta.guestOnly && user) {
-    if (to.name === 'login' && to.query.mode === 'admin') {
-      return true
-    }
     return { name: 'home' }
   }
 
-  if (to.meta.roles?.includes('admin')) {
+  if (to.meta.requiresAdmin || to.meta.roles?.includes('admin')) {
     const isAdmin =
       email?.endsWith('@admin.com') || email === 'admin@demo.local' || email === 'abc@test.com'
 
-    console.log('→ Checking roles: isAdmin =', isAdmin)
+    console.log('→ Checking admin access:', isAdmin)
 
     if (!isAdmin) {
-      console.warn('→ Non-administrator, jump AccessDenied')
+      console.warn('→ Non-admin user detected, redirecting to AccessDenied')
       return { name: 'denied', replace: true }
     }
   }
 
-  console.log('→ Access is via')
+  console.log('→ Access granted')
   return true
 })
 
