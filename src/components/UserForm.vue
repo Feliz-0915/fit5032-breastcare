@@ -2,32 +2,35 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import clinics from '../data/clinics.json'
 
-const LS_KEY = 'enquiriesV1'
+const LS_KEY = 'enquiriesV2'
 
 function readLS(key, fallback) {
   try {
     const v = JSON.parse(localStorage.getItem(key))
     return Array.isArray(v) ? v : fallback
-  } catch (e) {
+  } catch {
     return fallback
   }
 }
+
 const enquiries = ref(readLS(LS_KEY, []))
+
 watch(
   enquiries,
   (arr) => {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(arr ?? []))
-    } catch (e) {}
+    } catch {}
   },
   { deep: true },
 )
+
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
     if (e.key !== LS_KEY) return
     try {
       enquiries.value = e.newValue ? JSON.parse(e.newValue) : []
-    } catch (err) {
+    } catch {
       enquiries.value = []
     }
   })
@@ -48,6 +51,7 @@ const form = reactive({
   message: '',
   consent: false,
 })
+
 const errors = reactive({
   clinicId: '',
   name: '',
@@ -72,6 +76,7 @@ const timeValid = computed(() => !!form.preferredTime)
 const dateValid = computed(() => !form.preferredDate || form.preferredDate >= todayStr)
 const msgValid = computed(() => minLen(form.message, 20))
 const agreeValid = computed(() => !!form.consent)
+
 const allValid = computed(
   () =>
     clinicValid.value &&
@@ -91,7 +96,7 @@ function v(field) {
       ? ''
       : form.contactType === 'email'
         ? 'Enter a valid email.'
-        : 'Enter a valid phone (8-15 digits).'
+        : 'Enter a valid phone number.'
   if (field === 'preferredTime')
     errors.preferredTime = timeValid.value ? '' : 'Please choose a preferred time.'
   if (field === 'preferredDate')
@@ -107,21 +112,17 @@ watch(
     if (!id) return
     const latest = latestForClinic(id)
     if (latest) {
-      form.name = latest.name
-      form.contactType = latest.contactType
-      form.contact = latest.contact
-      form.preferredTime = latest.preferredTime
-      form.preferredDate = latest.preferredDate || ''
-      form.message = latest.message
-      form.consent = true
+      Object.assign(form, latest, { consent: true })
     } else {
-      form.name = ''
-      form.contactType = 'email'
-      form.contact = ''
-      form.preferredTime = ''
-      form.preferredDate = ''
-      form.message = ''
-      form.consent = false
+      Object.assign(form, {
+        name: '',
+        contactType: 'email',
+        contact: '',
+        preferredTime: '',
+        preferredDate: '',
+        message: '',
+        consent: false,
+      })
     }
   },
   { immediate: true },
@@ -136,10 +137,13 @@ function submit() {
     v,
   )
   if (!allValid.value) return
+  const clinic = clinics.find((c) => String(c.id) === String(form.clinicId))
   enquiries.value.push({
     clinicId: String(form.clinicId),
-    clinicName: clinics.find((c) => String(c.id) === String(form.clinicId))?.name || '',
-    postcode: clinics.find((c) => String(c.id) === String(form.clinicId))?.postcode || '',
+    clinicName: clinic?.clinicName || '',
+    suburb: clinic?.suburb || '',
+    rating: clinic?.rating || '',
+    contactInfo: clinic?.contact || '',
     name: form.name,
     contactType: form.contactType,
     contact: form.contact,
@@ -153,13 +157,15 @@ function submit() {
 
 function clearSavedForSelectedClinic() {
   if (!form.clinicId) return
-  form.name = ''
-  form.contactType = 'email'
-  form.contact = ''
-  form.preferredTime = ''
-  form.preferredDate = ''
-  form.message = ''
-  form.consent = false
+  Object.assign(form, {
+    name: '',
+    contactType: 'email',
+    contact: '',
+    preferredTime: '',
+    preferredDate: '',
+    message: '',
+    consent: false,
+  })
   Object.keys(errors).forEach((k) => (errors[k] = ''))
   alert('Form cleared (saved enquiries unchanged).')
 }
@@ -167,15 +173,9 @@ function clearSavedForSelectedClinic() {
 function loadEnquiry(idx) {
   const e = enquiries.value[idx]
   if (!e) return
-  form.clinicId = String(e.clinicId)
-  form.name = e.name || ''
-  form.contactType = e.contactType || 'email'
-  form.contact = e.contact || ''
-  form.preferredTime = e.preferredTime || ''
-  form.preferredDate = e.preferredDate || ''
-  form.message = e.message || ''
-  form.consent = true
+  Object.assign(form, e, { consent: true })
 }
+
 function deleteEnquiry(idx) {
   enquiries.value.splice(idx, 1)
 }
@@ -200,7 +200,7 @@ function deleteEnquiry(idx) {
         >
           <option value="" disabled>Choose a clinic</option>
           <option v-for="c in clinics" :key="c.id" :value="String(c.id)">
-            {{ c.name }} ({{ c.postcode }})
+            {{ c.clinicName }} ({{ c.suburb }})
           </option>
         </select>
         <div class="invalid-feedback">{{ errors.clinicId }}</div>
@@ -311,9 +311,9 @@ function deleteEnquiry(idx) {
           :class="errors.consent && 'is-invalid'"
           @change="v('consent')"
         />
-        <label for="consent" class="form-check-label">
-          I understand this demo stores my enquiry locally in this browser.
-        </label>
+        <label for="consent" class="form-check-label"
+          >I understand this demo stores my enquiry locally in this browser.</label
+        >
         <div class="invalid-feedback">{{ errors.consent }}</div>
       </div>
 
@@ -340,8 +340,9 @@ function deleteEnquiry(idx) {
         class="list-group-item d-flex justify-content-between align-items-center gap-2 flex-wrap"
       >
         <div class="small">
-          <strong>{{ e.clinicName }}</strong> ({{ e.postcode }}) - {{ e.name }} |
-          {{ e.contactType }}: {{ e.contact }} | {{ e.preferredTime }} {{ e.preferredDate || '' }} |
+          <strong>{{ e.clinicName }}</strong> ({{ e.suburb }}) {{ e.rating }}<br />
+          {{ e.name }} | {{ e.contactType }}: {{ e.contact }} | {{ e.preferredTime }}
+          {{ e.preferredDate || '' }}<br />
           {{ new Date(e.createdAt).toLocaleString() }}
         </div>
         <div class="d-flex gap-2">

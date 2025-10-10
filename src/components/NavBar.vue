@@ -25,6 +25,9 @@
           <li class="nav-item">
             <RouterLink class="nav-link" to="/email">Email</RouterLink>
           </li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/table">Table</RouterLink>
+          </li>
         </ul>
       </div>
 

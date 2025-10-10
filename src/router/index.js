@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import TablePage from '@/pages/TablePage.vue'
 
 const Home = () => import('../pages/Home.vue')
 const SelfCheck = () => import('../pages/SelfCheck.vue')
@@ -19,6 +20,7 @@ const routes = [
   { path: '/selfcheck', component: SelfCheck },
   { path: '/finder', component: Finder },
   { path: '/form', component: UserForm },
+  { path: '/table', component: TablePage },
   { path: '/reviews', name: 'reviews', component: Reviews, meta: { requiresAuth: true } },
 
   {

@@ -1,62 +1,142 @@
 [
-  { "id": 1, "name": "Melbourne Breast Clinic", "postcode": "3000", "free": true },
-  { "id": 2, "name": "Carlton Screening Centre", "postcode": "3053", "free": false },
-  { "id": 3, "name": "Southbank Health", "postcode": "3006", "free": true },
-  { "id": 4, "name": "Richmond Medical", "postcode": "3121", "free": false },
-  { "id": 5, "name": "Docklands Care", "postcode": "3008", "free": true },
-  { "id": 6, "name": "St Kilda Clinic", "postcode": "3182", "free": false },
-  { "id": 7, "name": "Fitzroy Women's Health", "postcode": "3065", "free": true },
-  { "id": 8, "name": "Brunswick Imaging Centre", "postcode": "3056", "free": false },
-  { "id": 9, "name": "North Melbourne Family Practice", "postcode": "3051", "free": true },
-  { "id": 10, "name": "Collingwood Community Health", "postcode": "3066", "free": true },
-  { "id": 11, "name": "Port Melbourne Diagnostic", "postcode": "3207", "free": false },
-  { "id": 12, "name": "Prahran Breast Screening", "postcode": "3181", "free": true },
-  { "id": 13, "name": "Hawthorn Medical Hub", "postcode": "3122", "free": false },
-  { "id": 14, "name": "Kew Health Centre", "postcode": "3101", "free": true },
-  { "id": 15, "name": "Toorak Private Clinic", "postcode": "3142", "free": false },
-  { "id": 16, "name": "South Yarra Wellness", "postcode": "3141", "free": true },
-  { "id": 17, "name": "Footscray Health Services", "postcode": "3011", "free": false },
-  { "id": 18, "name": "Flemington Care", "postcode": "3031", "free": true },
-  { "id": 19, "name": "Kensington Medical Group", "postcode": "3031", "free": false },
-  { "id": 20, "name": "Essendon Screening Clinic", "postcode": "3040", "free": true },
-  { "id": 21, "name": "Moonee Ponds Health", "postcode": "3039", "free": false },
-  { "id": 22, "name": "Ascot Vale Medical", "postcode": "3032", "free": true },
-  { "id": 23, "name": "Williamstown Care Centre", "postcode": "3016", "free": false },
-  { "id": 24, "name": "Yarraville Family Clinic", "postcode": "3013", "free": true },
-  { "id": 25, "name": "Newport Health", "postcode": "3015", "free": false },
-  { "id": 26, "name": "Sunshine West Medical", "postcode": "3020", "free": true },
-  { "id": 27, "name": "Altona Meadows Health", "postcode": "3028", "free": false },
-  { "id": 28, "name": "Point Cook Medical", "postcode": "3030", "free": false },
-  { "id": 29, "name": "Werribee Screening", "postcode": "3030", "free": true },
-  { "id": 30, "name": "Glen Iris Medical", "postcode": "3146", "free": false },
-  { "id": 31, "name": "Camberwell Care", "postcode": "3124", "free": true },
-  { "id": 32, "name": "Malvern Health", "postcode": "3144", "free": false },
-  { "id": 33, "name": "Bentleigh Diagnostics", "postcode": "3204", "free": true },
-  { "id": 34, "name": "Brighton Wellness", "postcode": "3186", "free": false },
-  { "id": 35, "name": "Elwood Family Health", "postcode": "3184", "free": true },
-  { "id": 36, "name": "Caulfield Medical Centre", "postcode": "3162", "free": false },
-  { "id": 37, "name": "Springvale Health", "postcode": "3171", "free": true },
-  { "id": 38, "name": "Clayton Screening Centre", "postcode": "3168", "free": false },
-  { "id": 39, "name": "Oakleigh Care", "postcode": "3166", "free": true },
-  { "id": 40, "name": "Dandenong Diagnostic", "postcode": "3175", "free": false },
-  { "id": 41, "name": "Noble Park Clinic", "postcode": "3174", "free": true },
-  { "id": 42, "name": "Mordialloc Health", "postcode": "3195", "free": false },
-  { "id": 43, "name": "Cheltenham Medical", "postcode": "3192", "free": true },
-  { "id": 44, "name": "Moorabbin Imaging", "postcode": "3189", "free": false },
-  { "id": 45, "name": "Hampton Women's Clinic", "postcode": "3188", "free": true },
-  { "id": 46, "name": "Sandringham Health", "postcode": "3191", "free": false },
-  { "id": 47, "name": "Glen Waverley Medical", "postcode": "3150", "free": true },
-  { "id": 48, "name": "Burwood Care", "postcode": "3125", "free": false },
-  { "id": 49, "name": "Box Hill Screening", "postcode": "3128", "free": true },
-  { "id": 50, "name": "Doncaster Health", "postcode": "3108", "free": false },
-  { "id": 51, "name": "Donvale Clinic", "postcode": "3111", "free": true },
-  { "id": 52, "name": "Templestowe Medical", "postcode": "3106", "free": false },
-  { "id": 53, "name": "Balwyn Care", "postcode": "3103", "free": true },
-  { "id": 54, "name": "Ivanhoe Health", "postcode": "3079", "free": false },
-  { "id": 55, "name": "Heidelberg Diagnostic", "postcode": "3084", "free": true },
-  { "id": 56, "name": "Northcote Women's Health", "postcode": "3070", "free": false },
-  { "id": 57, "name": "Preston Medical", "postcode": "3072", "free": true },
-  { "id": 58, "name": "Thornbury Care", "postcode": "3071", "free": false },
-  { "id": 59, "name": "Reservoir Health", "postcode": "3073", "free": true },
-  { "id": 60, "name": "Bundoora Medical", "postcode": "3083", "free": false }
+  {
+    "id": 1,
+    "clinicName": "Bright Breast Clinic",
+    "suburb": "Clayton",
+    "rating": 4.8,
+    "contact": "03 9123 4567"
+  },
+  {
+    "id": 2,
+    "clinicName": "Southern Health Centre",
+    "suburb": "Frankston",
+    "rating": 4.6,
+    "contact": "03 9789 8765"
+  },
+  {
+    "id": 3,
+    "clinicName": "CarePlus Medical",
+    "suburb": "Caulfield",
+    "rating": 4.9,
+    "contact": "03 9345 1234"
+  },
+  {
+    "id": 4,
+    "clinicName": "Women's Wellness Hub",
+    "suburb": "Berwick",
+    "rating": 4.5,
+    "contact": "03 9762 9988"
+  },
+  {
+    "id": 5,
+    "clinicName": "Pink Ribbon Health",
+    "suburb": "Melbourne CBD",
+    "rating": 4.7,
+    "contact": "03 9654 7777"
+  },
+  {
+    "id": 6,
+    "clinicName": "St. Mary's Breast Care",
+    "suburb": "Cheltenham",
+    "rating": 4.8,
+    "contact": "03 9521 9911"
+  },
+  {
+    "id": 7,
+    "clinicName": "Healthy Women Medical",
+    "suburb": "Glen Waverley",
+    "rating": 4.6,
+    "contact": "03 9888 2345"
+  },
+  {
+    "id": 8,
+    "clinicName": "Monash Medical Centre",
+    "suburb": "Clayton",
+    "rating": 4.9,
+    "contact": "03 9555 2222"
+  },
+  {
+    "id": 9,
+    "clinicName": "Mornington Women's Health",
+    "suburb": "Mornington",
+    "rating": 4.4,
+    "contact": "03 9788 5432"
+  },
+  {
+    "id": 10,
+    "clinicName": "Bayside Breast Screening",
+    "suburb": "Brighton",
+    "rating": 4.7,
+    "contact": "03 9592 8765"
+  },
+  {
+    "id": 11,
+    "clinicName": "Rosewell Health Clinic",
+    "suburb": "Box Hill",
+    "rating": 4.5,
+    "contact": "03 9890 7788"
+  },
+  {
+    "id": 12,
+    "clinicName": "East Melbourne Medical",
+    "suburb": "Richmond",
+    "rating": 4.6,
+    "contact": "03 9429 8899"
+  },
+  {
+    "id": 13,
+    "clinicName": "Waverley Women's Centre",
+    "suburb": "Mount Waverley",
+    "rating": 4.9,
+    "contact": "03 9802 6677"
+  },
+  {
+    "id": 14,
+    "clinicName": "South Yarra Breast Care",
+    "suburb": "South Yarra",
+    "rating": 4.8,
+    "contact": "03 9800 5555"
+  },
+  {
+    "id": 15,
+    "clinicName": "Hearts & Health Clinic",
+    "suburb": "Dandenong",
+    "rating": 4.3,
+    "contact": "03 9700 4321"
+  },
+  {
+    "id": 16,
+    "clinicName": "WellLife Diagnostics",
+    "suburb": "Narre Warren",
+    "rating": 4.7,
+    "contact": "03 9705 7890"
+  },
+  {
+    "id": 17,
+    "clinicName": "Harbour Women's Health",
+    "suburb": "Docklands",
+    "rating": 4.8,
+    "contact": "03 9020 1122"
+  },
+  {
+    "id": 18,
+    "clinicName": "Bloom Breast Screening",
+    "suburb": "Malvern",
+    "rating": 4.9,
+    "contact": "03 9500 1234"
+  },
+  {
+    "id": 19,
+    "clinicName": "CareFirst Medical Centre",
+    "suburb": "Bentleigh",
+    "rating": 4.6,
+    "contact": "03 9576 9090"
+  },
+  {
+    "id": 20,
+    "clinicName": "Hope Family Health",
+    "suburb": "Oakleigh",
+    "rating": 4.5,
+    "contact": "03 9568 8765"
+  }
 ]
