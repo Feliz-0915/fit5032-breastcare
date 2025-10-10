@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import TablePage from '@/pages/TablePage.vue'
 
 const Home = () => import('../pages/Home.vue')
-const SelfCheck = () => import('../pages/SelfCheck.vue')
+const SelfCheck = () => import('@/pages/SelfCheck.vue')
 const Finder = () => import('../pages/Finder.vue')
 const UserForm = () => import('../components/UserForm.vue')
 const Reviews = () => import('../pages/Reviews.vue')
