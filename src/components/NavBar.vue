@@ -28,6 +28,9 @@
           <li class="nav-item">
             <RouterLink class="nav-link" to="/table">Table</RouterLink>
           </li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/api">Cloud API</RouterLink>
+          </li>
         </ul>
       </div>
 

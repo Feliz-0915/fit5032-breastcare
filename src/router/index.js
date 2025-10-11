@@ -14,6 +14,7 @@ const AccessDenied = () => import('../pages/AccessDenied.vue')
 const Protected = () => import('../pages/Protected.vue')
 const NotFound = () => import('../pages/NotFound.vue')
 const Email = () => import('../pages/Email.vue')
+const ApiPage = () => import('../pages/ApiPage.vue')
 
 const routes = [
   { path: '/', name: 'home', component: Home },
@@ -49,7 +50,11 @@ const routes = [
     component: Email,
     meta: { requiresAdmin: true },
   },
-
+  {
+    path: '/api',
+    name: 'ApiPage',
+    component: ApiPage,
+  },
   { path: '/denied', name: 'denied', component: AccessDenied },
   { path: '/protected', component: Protected, meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: 'notfound', component: NotFound },
