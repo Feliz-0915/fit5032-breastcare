@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, computed, watch, nextTick, onMounted } from 'vue'
+import { reactive, computed, watch, nextTick, onMounted, ref } from 'vue'
 import clinics from '../data/clinics.json'
 import SavedFilters from '../components/SavedFilters.vue'
 import mapboxgl from 'mapbox-gl'
@@ -30,15 +30,14 @@ watch(
 
 const filtered = computed(() => {
   const list = clinics.filter((c) => {
-    const searchTerm = filters.suburb.toLowerCase()
+    const searchTerm = filters.suburb?.toLowerCase() || ''
     return (
       (!filters.suburb ||
-        c.suburb.toLowerCase().includes(searchTerm) ||
-        c.clinicName.toLowerCase().includes(searchTerm)) &&
+        c.suburb?.toLowerCase().includes(searchTerm) ||
+        c.clinicName?.toLowerCase().includes(searchTerm)) &&
       (!filters.minRating || c.rating >= filters.minRating)
     )
   })
-
   return list
     .sort((a, b) => {
       const va = String(a[filters.sortBy]).toLowerCase()
@@ -64,7 +63,9 @@ function loadSaved(f) {
 }
 
 let mapInstance = null
-let userMarker = null
+const nearestClinicName = ref('')
+const nearestDistance = ref('')
+const selectedClinic = ref(null)
 
 function flyToClinic(clinic) {
   if (!mapInstance || !clinic.longitude || !clinic.latitude) return
@@ -73,6 +74,21 @@ function flyToClinic(clinic) {
     zoom: 14,
     essential: true,
   })
+  selectedClinic.value = clinic
+}
+
+function calcDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
 }
 
 onMounted(async () => {
@@ -146,21 +162,13 @@ onMounted(async () => {
     )
 
     mapInstance.on('click', 'clinic-points', (e) => {
-      const coords = e.features[0].geometry.coordinates.slice()
       const props = e.features[0].properties
-      new mapboxgl.Popup()
-        .setLngLat(coords)
-        .setHTML(
-          `<b>${props.name}</b><br>${props.suburb}<br>Rating: ${props.rating}<br>Contact: ${props.contact}`,
-        )
-        .addTo(mapInstance)
-    })
-
-    mapInstance.on('mouseenter', 'clinic-points', () => {
-      mapInstance.getCanvas().style.cursor = 'pointer'
-    })
-    mapInstance.on('mouseleave', 'clinic-points', () => {
-      mapInstance.getCanvas().style.cursor = ''
+      selectedClinic.value = {
+        clinicName: props.name,
+        suburb: props.suburb,
+        rating: props.rating,
+        contact: props.contact,
+      }
     })
 
     if ('geolocation' in navigator) {
@@ -169,18 +177,19 @@ onMounted(async () => {
           const userLng = pos.coords.longitude
           const userLat = pos.coords.latitude
 
-          const userGeoJSON = {
-            type: 'FeatureCollection',
-            features: [
-              {
-                type: 'Feature',
-                geometry: { type: 'Point', coordinates: [userLng, userLat] },
-                properties: { title: 'You are here' },
-              },
-            ],
-          }
-
-          mapInstance.addSource('user-location', { type: 'geojson', data: userGeoJSON })
+          mapInstance.addSource('user-location', {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: [
+                {
+                  type: 'Feature',
+                  geometry: { type: 'Point', coordinates: [userLng, userLat] },
+                  properties: { title: 'You are here' },
+                },
+              ],
+            },
+          })
 
           mapInstance.addLayer({
             id: 'user-point',
@@ -194,11 +203,26 @@ onMounted(async () => {
             },
           })
 
+          let minDist = Infinity
+          let nearest = null
+          clinics.forEach((c) => {
+            if (c.latitude && c.longitude) {
+              const dist = calcDistance(userLat, userLng, c.latitude, c.longitude)
+              if (dist < minDist) {
+                minDist = dist
+                nearest = c
+              }
+            }
+          })
+
+          if (nearest) {
+            nearestClinicName.value = nearest.clinicName
+            nearestDistance.value = minDist.toFixed(2)
+          }
+
           mapInstance.flyTo({ center: [userLng, userLat], zoom: 12 })
         },
-        (err) => {
-          console.warn('Geolocation not allowed or failed:', err)
-        },
+        (err) => console.warn('Geolocation failed:', err),
         { enableHighAccuracy: true },
       )
     }
@@ -212,7 +236,7 @@ onMounted(async () => {
 
     <div class="row g-2 align-items-end mb-3">
       <div class="col-12 col-md-4">
-        <label class="form-label" for="search">Suburb</label>
+        <label class="form-label" for="search">Suburb / Clinic name</label>
         <input
           id="search"
           v-model.trim="filters.suburb"
@@ -240,7 +264,7 @@ onMounted(async () => {
       </div>
 
       <div class="col-12 col-md-auto ms-auto text-end">
-        <button type="button" class="btn btn-outline-secondary" @click="resetFilters">
+        <button class="btn btn-outline-secondary" type="button" @click="resetFilters">
           Reset filters
         </button>
       </div>
@@ -253,18 +277,35 @@ onMounted(async () => {
         class="list-group-item d-flex justify-content-between align-items-center"
       >
         <div>
-          <strong>{{ c.clinicName }}</strong> - {{ c.suburb }} ({{ c.rating }})
-          <br />
+          <strong>{{ c.clinicName }}</strong> - {{ c.suburb }} ({{ c.rating }})<br />
           <small class="text-muted">Contact: {{ c.contact }}</small>
         </div>
         <button class="btn btn-primary btn-sm" @click="flyToClinic(c)">Locate</button>
       </div>
+
       <div v-if="filtered.length === 0" class="text-muted px-2 py-3">
         No results found. Try different filters.
       </div>
     </div>
 
-    <div id="map" class="map-container mb-4"></div>
+    <div id="map" class="map-container mb-3 position-relative">
+      <div v-if="selectedClinic" class="info-card">
+        <b>{{ selectedClinic.clinicName }}</b
+        ><br />
+        {{ selectedClinic.suburb }}<br />
+        ⭐ Rating: {{ selectedClinic.rating }}<br />
+        ☎ {{ selectedClinic.contact }}<br />
+        <a
+          :href="`https://www.google.com/maps/dir/?api=1&destination=${selectedClinic.clinicName},${selectedClinic.suburb}`"
+          target="_blank"
+          >🚗 Open Route in Google Maps</a
+        >
+      </div>
+    </div>
+
+    <div v-if="nearestClinicName" class="alert alert-info mt-3">
+      🧭 Nearest clinic: <strong>{{ nearestClinicName }}</strong> ({{ nearestDistance }} km away)
+    </div>
 
     <SavedFilters :current="filters" @load="loadSaved" />
   </section>
@@ -276,5 +317,19 @@ onMounted(async () => {
   height: 500px;
   border-radius: 10px;
   overflow: hidden;
+  position: relative;
+}
+
+.info-card {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  font-size: 13px;
+  width: 220px;
+  line-height: 1.5;
 }
 </style>
