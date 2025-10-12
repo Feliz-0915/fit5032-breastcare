@@ -182,13 +182,13 @@ function deleteEnquiry(idx) {
 </script>
 
 <template>
-  <section>
+  <section id="main">
     <h2 class="h4 mb-3">Clinic Enquiry (Demo)</h2>
     <p class="text-muted mb-3">
       Data is stored locally in your browser (Local Storage). No data is uploaded.
     </p>
 
-    <form @submit.prevent="submit" novalidate class="row g-3">
+    <form @submit.prevent="submit" novalidate class="row g-3" aria-labelledby="formTitle">
       <div class="col-md-6">
         <label class="form-label" for="clinic">Clinic</label>
         <select
@@ -214,6 +214,7 @@ function deleteEnquiry(idx) {
           v-model.trim="form.name"
           :class="errors.name && 'is-invalid'"
           @blur="v('name')"
+          aria-required="true"
         />
         <div class="invalid-feedback">{{ errors.name }}</div>
       </div>
@@ -298,6 +299,7 @@ function deleteEnquiry(idx) {
           v-model.trim="form.message"
           :class="errors.message && 'is-invalid'"
           @blur="v('message')"
+          aria-required="true"
         ></textarea>
         <div class="invalid-feedback">{{ errors.message }}</div>
       </div>
@@ -318,12 +320,19 @@ function deleteEnquiry(idx) {
       </div>
 
       <div class="col-12 d-flex flex-wrap gap-2">
-        <button class="btn btn-primary" :disabled="!allValid">Submit enquiry</button>
+        <button
+          class="btn btn-primary"
+          :disabled="!allValid"
+          aria-label="Submit clinic enquiry form"
+        >
+          Submit enquiry
+        </button>
         <button
           type="button"
           class="btn btn-outline-secondary"
           @click="clearSavedForSelectedClinic"
           :disabled="!form.clinicId"
+          aria-label="Reset current form fields"
         >
           Reset form
         </button>
@@ -353,3 +362,10 @@ function deleteEnquiry(idx) {
     </ul>
   </section>
 </template>
+
+<style scoped>
+:focus-visible {
+  outline: 3px solid #007bff;
+  outline-offset: 2px;
+}
+</style>

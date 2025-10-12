@@ -1,5 +1,5 @@
 <template>
-  <main class="container py-5" style="max-width: 720px">
+  <main id="main" class="container py-5" style="max-width: 720px">
     <h2 class="mb-3">Reviews</h2>
     <p class="text-muted">Rate the overall app experience (1–5). See the aggregate score below.</p>
 
@@ -14,7 +14,12 @@
             </div>
           </div>
           <div>
-            <StarRating :model-value="displayAvg" @update:modelValue="noop" />
+            <StarRating
+              :model-value="displayAvg"
+              @update:modelValue="noop"
+              aria-label="Average rating stars"
+              tabindex="0"
+            />
           </div>
         </div>
       </div>
@@ -24,8 +29,17 @@
       <div class="card-body">
         <h6 class="mb-3">Your rating</h6>
         <div v-if="user">
-          <StarRating v-model="my" />
-          <button class="btn btn-primary btn-sm ms-3" @click="save" :disabled="saving">
+          <StarRating
+            v-model="my"
+            aria-label="Rate your app experience from 1 to 5 stars"
+            tabindex="0"
+          />
+          <button
+            class="btn btn-primary btn-sm ms-3"
+            @click="save"
+            :disabled="saving"
+            aria-label="Save your rating"
+          >
             {{ saving ? 'Saving…' : 'Save' }}
           </button>
         </div>
@@ -34,11 +48,13 @@
           <RouterLink
             class="btn btn-outline-primary btn-sm"
             :to="{ name: 'login', query: { redirect: '/reviews' } }"
+            aria-label="Login to rate"
             >Login</RouterLink
           >
           <RouterLink
             class="btn btn-primary btn-sm ms-2"
             :to="{ name: 'register', query: { redirect: '/reviews' } }"
+            aria-label="Register to rate"
             >Register</RouterLink
           >
         </div>
@@ -56,18 +72,23 @@
             rows="3"
             placeholder="Write your comment here..."
             maxlength="300"
+            aria-describedby="commentHelp"
           ></textarea>
+          <small id="commentHelp" class="text-muted">Maximum 300 characters.</small>
           <div class="d-flex justify-content-between align-items-center mt-2">
             <small class="text-muted">{{ newComment.length }}/300</small>
             <button
               class="btn btn-success btn-sm"
               @click="postComment"
               :disabled="!canPost || posting"
+              aria-label="Post comment"
             >
               {{ posting ? 'Posting…' : 'Post Comment' }}
             </button>
           </div>
-          <div v-if="commentError" class="text-danger mt-2">{{ commentError }}</div>
+          <div v-if="commentError" class="text-danger mt-2" aria-live="assertive">
+            {{ commentError }}
+          </div>
         </div>
         <div v-else>
           <p class="mb-2">You must be logged in to comment.</p>
@@ -75,7 +96,9 @@
 
         <hr class="my-3" />
 
-        <div v-if="commentsSorted.length === 0" class="text-muted">No comments yet.</div>
+        <div v-if="commentsSorted.length === 0" class="text-muted" aria-live="polite">
+          No comments yet.
+        </div>
 
         <ul class="list-unstyled m-0">
           <li v-for="c in commentsSorted" :key="c.id" class="py-3 border-bottom">
@@ -101,22 +124,41 @@
                       class="btn btn-primary btn-sm"
                       @click="saveEdit(c)"
                       :disabled="savingEdit"
+                      aria-label="Save comment edit"
                     >
                       {{ savingEdit ? 'Saving…' : 'Save' }}
                     </button>
-                    <button class="btn btn-outline-secondary btn-sm" @click="cancelEdit">
+                    <button
+                      class="btn btn-outline-secondary btn-sm"
+                      @click="cancelEdit"
+                      aria-label="Cancel comment edit"
+                    >
                       Cancel
                     </button>
                   </div>
-                  <div v-if="editError" class="text-danger mt-2">{{ editError }}</div>
+                  <div v-if="editError" class="text-danger mt-2" aria-live="assertive">
+                    {{ editError }}
+                  </div>
                 </div>
 
                 <p v-else class="mb-0 mt-2" v-text="c.text"></p>
               </div>
 
               <div v-if="canManage(c)" class="d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm" @click="startEdit(c)">Edit</button>
-                <button class="btn btn-outline-danger btn-sm" @click="remove(c.id)">Delete</button>
+                <button
+                  class="btn btn-outline-secondary btn-sm"
+                  @click="startEdit(c)"
+                  aria-label="Edit comment"
+                >
+                  Edit
+                </button>
+                <button
+                  class="btn btn-outline-danger btn-sm"
+                  @click="remove(c.id)"
+                  aria-label="Delete comment"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </li>
@@ -319,3 +361,10 @@ watch(
   { deep: true },
 )
 </script>
+
+<style scoped>
+:focus-visible {
+  outline: 3px solid #007bff;
+  outline-offset: 2px;
+}
+</style>

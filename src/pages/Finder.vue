@@ -15,6 +15,7 @@ function readLS() {
     return null
   }
 }
+
 const filters = reactive(readLS() ?? { suburb: '', minRating: 0, sortBy: 'clinicName' })
 watch(filters, (v) => localStorage.setItem(LS_KEY, JSON.stringify(v)), { deep: true })
 
@@ -204,13 +205,14 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section>
+  <section id="main">
     <h2 class="h4 mb-3">Clinic Finder</h2>
 
     <div class="row g-2 align-items-end mb-3">
       <div class="col-12 col-md-4">
-        <label class="form-label">Suburb / Clinic name</label>
+        <label class="form-label" for="suburbInput">Suburb / Clinic name</label>
         <input
+          id="suburbInput"
           v-model.trim="filters.suburb"
           class="form-control"
           placeholder="Search by suburb or clinic name"
@@ -218,8 +220,8 @@ onMounted(async () => {
       </div>
 
       <div class="col-6 col-md-3">
-        <label class="form-label">Min Rating</label>
-        <select v-model.number="filters.minRating" class="form-select">
+        <label class="form-label" for="minRating">Min Rating</label>
+        <select id="minRating" v-model.number="filters.minRating" class="form-select">
           <option :value="0">All</option>
           <option :value="4.5">4.5+</option>
           <option :value="4.7">4.7+</option>
@@ -228,15 +230,17 @@ onMounted(async () => {
       </div>
 
       <div class="col-6 col-md-3">
-        <label class="form-label">Sort by</label>
-        <select v-model="filters.sortBy" class="form-select">
+        <label class="form-label" for="sortBy">Sort by</label>
+        <select id="sortBy" v-model="filters.sortBy" class="form-select">
           <option value="clinicName">Clinic Name</option>
           <option value="suburb">Suburb</option>
         </select>
       </div>
 
       <div class="col-12 col-md-auto ms-auto text-end">
-        <button class="btn btn-outline-secondary" @click="resetFilters">Reset filters</button>
+        <button class="btn btn-outline-secondary" @click="resetFilters" aria-label="Reset filters">
+          Reset filters
+        </button>
       </div>
     </div>
 
@@ -250,15 +254,27 @@ onMounted(async () => {
           <strong>{{ c.clinicName }}</strong> - {{ c.suburb }} ({{ c.rating }})<br />
           <small class="text-muted">Contact: {{ c.contact }}</small>
         </div>
-        <button class="btn btn-primary btn-sm" @click="flyToClinic(c)">Locate</button>
+        <button
+          class="btn btn-primary btn-sm"
+          @click="flyToClinic(c)"
+          :aria-label="`Locate ${c.clinicName} on map`"
+        >
+          Locate
+        </button>
       </div>
       <div v-if="filtered.length === 0" class="text-muted px-2 py-3">
         No results found. Try different filters.
       </div>
     </div>
 
-    <div id="map" class="map-container position-relative">
-      <div v-if="selectedClinic" class="info-card">
+    <div
+      id="map"
+      class="map-container position-relative"
+      role="application"
+      aria-label="Interactive map showing clinic locations in Melbourne"
+      tabindex="0"
+    >
+      <div v-if="selectedClinic" class="info-card" aria-live="polite">
         <b>{{ selectedClinic.clinicName }}</b
         ><br />
         {{ selectedClinic.suburb }}<br />
@@ -267,13 +283,14 @@ onMounted(async () => {
         <a
           :href="`https://www.google.com/maps/dir/?api=1&destination=${selectedClinic.clinicName},${selectedClinic.suburb}`"
           target="_blank"
+          aria-label="Open route in Google Maps"
         >
           🚗 Open Route in Google Maps
         </a>
       </div>
     </div>
 
-    <div v-if="nearestClinic" class="alert alert-info mt-3">
+    <div v-if="nearestClinic" class="alert alert-info mt-3" aria-live="polite">
       🧭 Nearest clinic: <strong>{{ nearestClinic.clinicName }}</strong>
     </div>
 
@@ -289,7 +306,6 @@ onMounted(async () => {
   overflow: hidden;
   position: relative;
 }
-
 .info-card {
   position: absolute;
   top: 15px;
@@ -301,5 +317,9 @@ onMounted(async () => {
   font-size: 13px;
   width: 220px;
   line-height: 1.5;
+}
+:focus-visible {
+  outline: 3px solid #007bff;
+  outline-offset: 2px;
 }
 </style>
