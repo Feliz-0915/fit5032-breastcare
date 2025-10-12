@@ -15,18 +15,8 @@ function readLS() {
     return null
   }
 }
-
 const filters = reactive(readLS() ?? { suburb: '', minRating: 0, sortBy: 'clinicName' })
-
-watch(
-  filters,
-  (v) => {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(v))
-    } catch {}
-  },
-  { deep: true },
-)
+watch(filters, (v) => localStorage.setItem(LS_KEY, JSON.stringify(v)), { deep: true })
 
 const filtered = computed(() => {
   const list = clinics.filter((c) => {
@@ -51,9 +41,7 @@ function resetFilters() {
   filters.suburb = ''
   filters.minRating = 0
   filters.sortBy = 'clinicName'
-  try {
-    localStorage.removeItem(LS_KEY)
-  } catch {}
+  localStorage.removeItem(LS_KEY)
 }
 
 function loadSaved(f) {
@@ -63,17 +51,12 @@ function loadSaved(f) {
 }
 
 let mapInstance = null
-const nearestClinicName = ref('')
-const nearestDistance = ref('')
 const selectedClinic = ref(null)
+const nearestClinic = ref(null)
 
 function flyToClinic(clinic) {
   if (!mapInstance || !clinic.longitude || !clinic.latitude) return
-  mapInstance.flyTo({
-    center: [clinic.longitude, clinic.latitude],
-    zoom: 14,
-    essential: true,
-  })
+  mapInstance.flyTo({ center: [clinic.longitude, clinic.latitude], zoom: 14, essential: true })
   selectedClinic.value = clinic
 }
 
@@ -93,7 +76,6 @@ function calcDistance(lat1, lon1, lat2, lon2) {
 
 onMounted(async () => {
   await nextTick()
-
   mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
 
   mapInstance = new mapboxgl.Map({
@@ -123,10 +105,7 @@ onMounted(async () => {
             rating: c.rating,
             contact: c.contact,
           },
-          geometry: {
-            type: 'Point',
-            coordinates: [c.longitude, c.latitude],
-          },
+          geometry: { type: 'Point', coordinates: [c.longitude, c.latitude] },
         })),
       },
     })
@@ -135,9 +114,7 @@ onMounted(async () => {
       'https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png',
       (error, image) => {
         if (error) throw error
-        if (!mapInstance.hasImage('clinic-icon')) {
-          mapInstance.addImage('clinic-icon', image)
-        }
+        if (!mapInstance.hasImage('clinic-icon')) mapInstance.addImage('clinic-icon', image)
 
         mapInstance.addLayer({
           id: 'clinic-points',
@@ -214,11 +191,7 @@ onMounted(async () => {
               }
             }
           })
-
-          if (nearest) {
-            nearestClinicName.value = nearest.clinicName
-            nearestDistance.value = minDist.toFixed(2)
-          }
+          if (nearest) nearestClinic.value = nearest
 
           mapInstance.flyTo({ center: [userLng, userLat], zoom: 12 })
         },
@@ -236,9 +209,8 @@ onMounted(async () => {
 
     <div class="row g-2 align-items-end mb-3">
       <div class="col-12 col-md-4">
-        <label class="form-label" for="search">Suburb / Clinic name</label>
+        <label class="form-label">Suburb / Clinic name</label>
         <input
-          id="search"
           v-model.trim="filters.suburb"
           class="form-control"
           placeholder="Search by suburb or clinic name"
@@ -246,8 +218,8 @@ onMounted(async () => {
       </div>
 
       <div class="col-6 col-md-3">
-        <label class="form-label" for="rating">Min Rating</label>
-        <select id="rating" v-model.number="filters.minRating" class="form-select">
+        <label class="form-label">Min Rating</label>
+        <select v-model.number="filters.minRating" class="form-select">
           <option :value="0">All</option>
           <option :value="4.5">4.5+</option>
           <option :value="4.7">4.7+</option>
@@ -256,17 +228,15 @@ onMounted(async () => {
       </div>
 
       <div class="col-6 col-md-3">
-        <label class="form-label" for="sort">Sort by</label>
-        <select id="sort" v-model="filters.sortBy" class="form-select">
+        <label class="form-label">Sort by</label>
+        <select v-model="filters.sortBy" class="form-select">
           <option value="clinicName">Clinic Name</option>
           <option value="suburb">Suburb</option>
         </select>
       </div>
 
       <div class="col-12 col-md-auto ms-auto text-end">
-        <button class="btn btn-outline-secondary" type="button" @click="resetFilters">
-          Reset filters
-        </button>
+        <button class="btn btn-outline-secondary" @click="resetFilters">Reset filters</button>
       </div>
     </div>
 
@@ -282,13 +252,12 @@ onMounted(async () => {
         </div>
         <button class="btn btn-primary btn-sm" @click="flyToClinic(c)">Locate</button>
       </div>
-
       <div v-if="filtered.length === 0" class="text-muted px-2 py-3">
         No results found. Try different filters.
       </div>
     </div>
 
-    <div id="map" class="map-container mb-3 position-relative">
+    <div id="map" class="map-container position-relative">
       <div v-if="selectedClinic" class="info-card">
         <b>{{ selectedClinic.clinicName }}</b
         ><br />
@@ -298,13 +267,14 @@ onMounted(async () => {
         <a
           :href="`https://www.google.com/maps/dir/?api=1&destination=${selectedClinic.clinicName},${selectedClinic.suburb}`"
           target="_blank"
-          >🚗 Open Route in Google Maps</a
         >
+          🚗 Open Route in Google Maps
+        </a>
       </div>
     </div>
 
-    <div v-if="nearestClinicName" class="alert alert-info mt-3">
-      🧭 Nearest clinic: <strong>{{ nearestClinicName }}</strong> ({{ nearestDistance }} km away)
+    <div v-if="nearestClinic" class="alert alert-info mt-3">
+      🧭 Nearest clinic: <strong>{{ nearestClinic.clinicName }}</strong>
     </div>
 
     <SavedFilters :current="filters" @load="loadSaved" />
