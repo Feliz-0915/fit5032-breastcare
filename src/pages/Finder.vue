@@ -39,7 +39,7 @@ const filtered = computed(() => {
 })
 
 const currentPage = ref(1)
-const itemsPerPage = 8
+const itemsPerPage = 5
 const totalPages = computed(() => Math.ceil(filtered.value.length / itemsPerPage))
 
 const paginatedClinics = computed(() => {

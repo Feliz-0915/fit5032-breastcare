@@ -7,13 +7,7 @@
     <form @submit.prevent="onSubmit" novalidate>
       <div class="mb-3">
         <label class="form-label">Name (optional)</label>
-        <input
-          v-model.trim="name"
-          type="text"
-          class="form-control"
-          autocomplete="name"
-          maxlength="40"
-        />
+        <input v-model.trim="name" type="text" class="form-control" maxlength="40" />
       </div>
 
       <div class="mb-3">
@@ -24,9 +18,7 @@
           class="form-control"
           required
           autocomplete="email"
-          inputmode="email"
-          pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
-          title="Please enter a valid email address (e.g., name@example.com)"
+          pattern="^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
         />
         <div class="form-text">Format: name@example.com</div>
       </div>
@@ -39,22 +31,15 @@
             v-model="password"
             class="form-control"
             required
-            autocomplete="new-password"
             minlength="8"
           />
-          <button
-            type="button"
-            class="btn btn-outline-secondary"
-            @click="showPw = !showPw"
-            :aria-pressed="showPw ? 'true' : 'false'"
-          >
+          <button type="button" class="btn btn-outline-secondary" @click="showPw = !showPw">
             {{ showPw ? 'Hide' : 'Show' }}
           </button>
         </div>
         <div class="form-text">At least 8 chars, include upper/lower/digit.</div>
       </div>
 
-      <!-- Confirm Password -->
       <div class="mb-3">
         <label class="form-label">Confirm Password</label>
         <div class="input-group">
@@ -63,15 +48,9 @@
             v-model="confirmPassword"
             class="form-control"
             required
-            autocomplete="new-password"
             minlength="8"
           />
-          <button
-            type="button"
-            class="btn btn-outline-secondary"
-            @click="showPw2 = !showPw2"
-            :aria-pressed="showPw2 ? 'true' : 'false'"
-          >
+          <button type="button" class="btn btn-outline-secondary" @click="showPw2 = !showPw2">
             {{ showPw2 ? 'Hide' : 'Show' }}
           </button>
         </div>
@@ -92,12 +71,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useAuth } from '../auth/useAuth'
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 
 const router = useRouter()
 const route = useRoute()
-const { register } = useAuth()
-
 const name = ref('')
 const email = ref('')
 const password = ref('')
@@ -126,20 +103,25 @@ async function onSubmit() {
   error.value = ''
   if (!validate()) return
   loading.value = true
+  const auth = getAuth()
   try {
-    const payload = {
-      name: name.value?.trim(),
-      email: email.value?.trim(),
-      password: password.value,
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email.value.trim(),
+      password.value,
+    )
+    if (name.value) {
+      await updateProfile(userCredential.user, { displayName: name.value.trim() })
     }
-    await register(payload)
     const redirect =
       typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
         ? route.query.redirect
         : '/'
     router.replace(redirect)
   } catch (e) {
-    error.value = e?.message || 'Registration failed'
+    if (e.code === 'auth/email-already-in-use') error.value = 'Email already registered'
+    else if (e.code === 'auth/weak-password') error.value = 'Password too weak'
+    else error.value = e.message || 'Registration failed'
   } finally {
     loading.value = false
   }
