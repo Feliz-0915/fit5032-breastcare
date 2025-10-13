@@ -15,6 +15,7 @@ const Protected = () => import('../pages/Protected.vue')
 const NotFound = () => import('../pages/NotFound.vue')
 const Email = () => import('../pages/Email.vue')
 const ApiPage = () => import('../pages/ApiPage.vue')
+const AppointmentBooking = () => import('../pages/AppointmentBooking.vue')
 
 const routes = [
   { path: '/', name: 'home', component: Home },
@@ -22,39 +23,23 @@ const routes = [
   { path: '/finder', component: Finder },
   { path: '/form', component: UserForm },
   { path: '/table', component: TablePage },
+  {
+    path: '/appointment',
+    name: 'appointment',
+    component: AppointmentBooking,
+    meta: { requiresAuth: true },
+  },
   { path: '/reviews', name: 'reviews', component: Reviews, meta: { requiresAuth: true } },
-
-  {
-    path: '/login',
-    name: 'login',
-    component: Login,
-    meta: { guestOnly: true },
-  },
-  {
-    path: '/register',
-    name: 'register',
-    component: Register,
-    meta: { guestOnly: true },
-  },
-
+  { path: '/login', name: 'login', component: Login, meta: { guestOnly: true } },
+  { path: '/register', name: 'register', component: Register, meta: { guestOnly: true } },
   {
     path: '/admin',
     name: 'admin',
     component: Admin,
     meta: { requiresAuth: true, roles: ['admin'] },
   },
-
-  {
-    path: '/email',
-    name: 'email',
-    component: Email,
-    meta: { requiresAdmin: true },
-  },
-  {
-    path: '/api',
-    name: 'ApiPage',
-    component: ApiPage,
-  },
+  { path: '/email', name: 'email', component: Email, meta: { requiresAdmin: true } },
+  { path: '/api', name: 'api', component: ApiPage },
   { path: '/denied', name: 'denied', component: AccessDenied },
   { path: '/protected', component: Protected, meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: 'notfound', component: NotFound },
@@ -80,11 +65,7 @@ router.beforeEach(async (to) => {
   const user = await getCurrentUser()
   const email = user?.email || null
 
-  console.log('[ROUTER GUARD] To:', to.fullPath)
-  console.log('→ currentUser:', email)
-
   if (to.meta.requiresAuth && !user) {
-    console.log('→ Not logged in, redirecting to login page')
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
@@ -95,16 +76,11 @@ router.beforeEach(async (to) => {
   if (to.meta.requiresAdmin || to.meta.roles?.includes('admin')) {
     const isAdmin =
       email?.endsWith('@admin.com') || email === 'admin@demo.local' || email === 'abc@test.com'
-
-    console.log('→ Checking admin access:', isAdmin)
-
     if (!isAdmin) {
-      console.warn('→ Non-admin user detected, redirecting to AccessDenied')
       return { name: 'denied', replace: true }
     }
   }
 
-  console.log('→ Access granted')
   return true
 })
 

@@ -3,7 +3,7 @@
     <a href="#main" class="skip-link" tabindex="0">Skip to main content</a>
     <div class="container-fluid d-flex justify-content-between align-items-center">
       <div class="d-flex align-items-center">
-        <RouterLink class="navbar-brand fw-bold text-white me-4" to="/"> BreastCare </RouterLink>
+        <RouterLink class="navbar-brand fw-bold text-white me-4" to="/">BreastCare</RouterLink>
         <ul class="navbar-nav">
           <li class="nav-item" v-for="link in navLinks" :key="link.to">
             <RouterLink class="nav-link" :to="link.to" tabindex="0">
@@ -46,6 +46,7 @@ const navLinks = [
   { label: 'Home', to: '/' },
   { label: 'Self Check', to: '/selfcheck' },
   { label: 'Finder', to: '/finder' },
+  { label: 'Appointment', to: '/appointment' },
   { label: 'Form', to: '/form' },
   { label: 'Reviews', to: '/reviews' },
   { label: 'Admin', to: '/admin' },
