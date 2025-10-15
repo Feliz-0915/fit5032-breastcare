@@ -1,19 +1,8 @@
 <template>
   <div class="container py-4">
-    <h2 class="mb-3 text-primary">Send Email with Attachment</h2>
+    <h2 class="mb-3 text-primary">Send Email to All Users</h2>
 
     <form @submit.prevent="sendEmail" class="card p-3 shadow-sm">
-      <div class="mb-3">
-        <label class="form-label">Recipient Email</label>
-        <input
-          v-model="to"
-          type="email"
-          class="form-control"
-          placeholder="example@gmail.com"
-          required
-        />
-      </div>
-
       <div class="mb-3">
         <label class="form-label">Subject</label>
         <input
@@ -36,7 +25,7 @@
       </div>
 
       <button type="submit" class="btn btn-primary w-100" :disabled="loading">
-        {{ loading ? 'Sending...' : 'Send Email' }}
+        {{ loading ? 'Sending...' : 'Send to All Users' }}
       </button>
 
       <div v-if="status" class="alert mt-3" :class="statusClass">{{ status }}</div>
@@ -46,21 +35,13 @@
 
 <script>
 import axios from 'axios'
-
 export default {
   data() {
-    return {
-      to: '',
-      subject: '',
-      message: '',
-      file: null,
-      status: '',
-      loading: false,
-    }
+    return { subject: '', message: '', file: null, status: '', loading: false }
   },
   computed: {
     statusClass() {
-      return this.status.includes('success') ? 'alert-success' : 'alert-danger'
+      return this.status.startsWith('Email') ? 'alert-success' : 'alert-danger'
     },
   },
   methods: {
@@ -70,16 +51,15 @@ export default {
     async sendEmail() {
       this.loading = true
       const formData = new FormData()
-      formData.append('to', this.to)
       formData.append('subject', this.subject)
       formData.append('message', this.message)
       if (this.file) formData.append('attachment', this.file)
 
       try {
-        await axios.post('http://localhost:3000/send-email', formData, {
+        const res = await axios.post('http://localhost:3000/send-email', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
-        this.status = 'Email sent successfully'
+        this.status = res.data || 'Email sent successfully'
       } catch (err) {
         this.status = 'Failed to send email'
       } finally {
