@@ -1,14 +1,37 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import clinics from '../data/clinics.json'
+import { getFirestore, collection, onSnapshot } from 'firebase/firestore'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import { Chart } from 'chart.js/auto'
 
-const totalClinics = clinics.length
+const db = getFirestore()
+const clinics = ref([])
+const users = ref([])
+const appointments = ref([])
+
+const totalClinics = computed(() => clinics.value.length)
+const totalUsers = computed(() => users.value.length)
+const totalAppointments = computed(() => appointments.value.length)
+
 const avgRating = computed(() => {
-  if (!clinics.length) return 0
-  const sum = clinics.reduce((acc, c) => acc + (c.rating || 0), 0)
-  return (sum / clinics.length).toFixed(1)
+  if (!clinics.value.length) return 0
+  const sum = clinics.value.reduce((acc, c) => acc + (c.rating || 0), 0)
+  return (sum / clinics.value.length).toFixed(1)
+})
+
+onMounted(() => {
+  onSnapshot(collection(db, 'clinics'), (snap) => {
+    clinics.value = snap.docs.map((d) => d.data())
+    drawCharts()
+  })
+  onSnapshot(collection(db, 'users'), (snap) => {
+    users.value = snap.docs.map((d) => d.data())
+    drawCharts()
+  })
+  onSnapshot(collection(db, 'appointments'), (snap) => {
+    appointments.value = snap.docs.map((d) => d.data())
+  })
 })
 
 function exportToCSV(data, filename = 'clinics_admin.csv') {
@@ -46,6 +69,88 @@ const exportAllToPDF = async () => {
   await exportToPDF('hiddenExport', 'clinics_admin.pdf')
   hidden.style.display = 'none'
 }
+
+let suburbChart = null
+let ratingChart = null
+let roleChart = null
+
+function drawCharts() {
+  const suburbs = {}
+  const ratings = { Low: 0, Medium: 0, High: 0 }
+  const roles = {}
+
+  clinics.value.forEach((c) => {
+    if (c.suburb) suburbs[c.suburb] = (suburbs[c.suburb] || 0) + 1
+    if (c.rating <= 3) ratings.Low++
+    else if (c.rating <= 4) ratings.Medium++
+    else ratings.High++
+  })
+
+  users.value.forEach((u) => {
+    const role = u.role || 'unknown'
+    roles[role] = (roles[role] || 0) + 1
+  })
+
+  const suburbLabels = Object.keys(suburbs)
+  const suburbData = Object.values(suburbs)
+  const ratingLabels = Object.keys(ratings)
+  const ratingData = Object.values(ratings)
+  const roleLabels = Object.keys(roles)
+  const roleData = Object.values(roles)
+
+  const ctx1 = document.getElementById('clinicChart')
+  const ctx2 = document.getElementById('ratingChart')
+  const ctx3 = document.getElementById('roleChart')
+
+  if (suburbChart) suburbChart.destroy()
+  if (ratingChart) ratingChart.destroy()
+  if (roleChart) roleChart.destroy()
+
+  suburbChart = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: suburbLabels,
+      datasets: [
+        {
+          label: 'Clinics per Suburb',
+          data: suburbData,
+          backgroundColor: 'rgba(54,162,235,0.5)',
+          borderColor: 'rgb(54,162,235)',
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { title: { display: true, text: 'Clinic Distribution by Suburb' } },
+      scales: { y: { beginAtZero: true } },
+    },
+  })
+
+  ratingChart = new Chart(ctx2, {
+    type: 'pie',
+    data: {
+      labels: ratingLabels,
+      datasets: [{ data: ratingData, backgroundColor: ['#ff6b6b', '#feca57', '#1dd1a1'] }],
+    },
+    options: {
+      responsive: true,
+      plugins: { title: { display: true, text: 'Clinic Rating Distribution' } },
+    },
+  })
+
+  roleChart = new Chart(ctx3, {
+    type: 'doughnut',
+    data: {
+      labels: roleLabels,
+      datasets: [{ data: roleData, backgroundColor: ['#48dbfb', '#5f27cd', '#ff9f43', '#10ac84'] }],
+    },
+    options: {
+      responsive: true,
+      plugins: { title: { display: true, text: 'User Type Distribution' } },
+    },
+  })
+}
 </script>
 
 <template>
@@ -56,27 +161,47 @@ const exportAllToPDF = async () => {
     </p>
 
     <div class="row mb-4 g-3">
-      <div class="col-md-4">
-        <div class="card border-primary shadow-sm">
+      <div
+        class="col-md-3"
+        v-for="card in [
+          { title: 'Total Clinics', value: totalClinics, color: 'primary' },
+          { title: 'Average Rating', value: avgRating, color: 'success' },
+          { title: 'Total Users', value: totalUsers, color: 'info' },
+          { title: 'Total Appointments', value: totalAppointments, color: 'warning' },
+        ]"
+        :key="card.title"
+      >
+        <div :class="`card border-${card.color} shadow-sm`">
           <div class="card-body text-center">
-            <h5 class="card-title">Total Clinics</h5>
-            <p class="display-6 fw-bold text-primary">{{ totalClinics }}</p>
+            <h5 class="card-title">{{ card.title }}</h5>
+            <p :class="`display-6 fw-bold text-${card.color}`">{{ card.value }}</p>
           </div>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="card border-success shadow-sm">
-          <div class="card-body text-center">
-            <h5 class="card-title">Average Rating</h5>
-            <p class="display-6 fw-bold text-success">{{ avgRating }}</p>
+    </div>
+
+    <div class="row mb-4 g-3">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-info text-white fw-bold">Clinic Distribution</div>
+          <div class="card-body">
+            <canvas id="clinicChart" height="120"></canvas>
           </div>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="card border-secondary shadow-sm">
-          <div class="card-body text-center">
-            <h5 class="card-title">Data Formats Supported</h5>
-            <p class="fw-bold">CSV / PDF</p>
+      <div class="col-md-3">
+        <div class="card shadow-sm">
+          <div class="card-header bg-success text-white fw-bold">Rating Overview</div>
+          <div class="card-body">
+            <canvas id="ratingChart" height="120"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card shadow-sm">
+          <div class="card-header bg-secondary text-white fw-bold">User Types</div>
+          <div class="card-body">
+            <canvas id="roleChart" height="120"></canvas>
           </div>
         </div>
       </div>
@@ -116,37 +241,6 @@ const exportAllToPDF = async () => {
           </table>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header bg-secondary text-white">Future Modules</div>
-      <div class="card-body">
-        <ul>
-          <li>Review Management (moderate user reviews & ratings)</li>
-          <li>User Management (add / remove users)</li>
-        </ul>
-      </div>
-    </div>
-
-    <div id="hiddenExport" style="display: none">
-      <table class="table table-bordered">
-        <thead>
-          <tr>
-            <th>Clinic Name</th>
-            <th>Suburb</th>
-            <th>Rating</th>
-            <th>Contact</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="c in clinics" :key="c.id">
-            <td>{{ c.clinicName }}</td>
-            <td>{{ c.suburb }}</td>
-            <td>{{ c.rating }}</td>
-            <td>{{ c.contact }}</td>
-          </tr>
-        </tbody>
-      </table>
     </div>
   </section>
 </template>
