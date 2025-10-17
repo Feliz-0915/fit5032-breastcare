@@ -183,10 +183,7 @@ function deleteEnquiry(idx) {
 
 <template>
   <section id="main">
-    <h2 class="h4 mb-3">Clinic Enquiry (Demo)</h2>
-    <p class="text-muted mb-3">
-      Data is stored locally in your browser (Local Storage). No data is uploaded.
-    </p>
+    <h2 class="h4 mb-3">Clinic Enquiry</h2>
 
     <form @submit.prevent="submit" novalidate class="row g-3" aria-labelledby="formTitle">
       <div class="col-md-6">

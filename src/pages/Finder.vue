@@ -127,7 +127,8 @@ function calcDistance(lat1, lon1, lat2, lon2) {
 
 onMounted(async () => {
   await nextTick()
-  mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
+  mapboxgl.accessToken =
+    'pk.eyJ1IjoiZmVsaXgwMTIwIiwiYSI6ImNtZ25pZW00ajAzNXUycnBuOXZvY3dhbGMifQ.RNMCmBymktOIz41z1j14qA'
   mapInstance = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/streets-v11',

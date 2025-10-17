@@ -56,7 +56,7 @@ export default {
       if (this.file) formData.append('attachment', this.file)
 
       try {
-        const res = await axios.post('http://localhost:3000/send-email', formData, {
+        const res = await axios.post('http://localhost:5001/send-email', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
         this.status = res.data || 'Email sent successfully'
