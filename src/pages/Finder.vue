@@ -127,139 +127,144 @@ function calcDistance(lat1, lon1, lat2, lon2) {
 
 onMounted(async () => {
   await nextTick()
+
   mapboxgl.accessToken =
-    'pk.eyJ1IjoiZmVsaXgwMTIwIiwiYSI6ImNtZ25pZW00ajAzNXUycnBuOXZvY3dhbGMifQ.RNMCmBymktOIz41z1j14qA'
-  mapInstance = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/streets-v11',
-    center: [144.9631, -37.8136],
-    zoom: 9,
-  })
-  const geocoder = new MapboxGeocoder({
-    accessToken: mapboxgl.accessToken,
-    mapboxgl,
-    placeholder: 'Search Melbourne clinics...',
-  })
-  mapInstance.addControl(geocoder)
-  mapInstance.on('load', () => {
-    mapInstance.addSource('clinics', {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: clinics.map((c) => ({
-          type: 'Feature',
-          properties: {
-            name: c.clinicName,
-            suburb: c.suburb,
-            rating: c.rating,
-            contact: c.contact,
-          },
-          geometry: { type: 'Point', coordinates: [c.longitude, c.latitude] },
-        })),
-      },
+    'pk.eyJ1IjoiZmVsaXgwMTIwIiwiYSI6ImNtZ25pZW00ajAzNXUycnBuOXZvY3dhbGMifQ.RNMCmBymktOIz41z1j14qAcd'
+
+  setTimeout(() => {
+    mapInstance = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v11',
+      center: [144.9631, -37.8136],
+      zoom: 9,
     })
-    mapInstance.loadImage(
-      'https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png',
-      (error, image) => {
-        if (error) throw error
-        if (!mapInstance.hasImage('clinic-icon')) mapInstance.addImage('clinic-icon', image)
-        mapInstance.addLayer({
-          id: 'clinic-points',
-          type: 'symbol',
-          source: 'clinics',
-          layout: {
-            'icon-image': 'clinic-icon',
-            'icon-size': 0.8,
-            'icon-allow-overlap': true,
-            'text-field': ['get', 'name'],
-            'text-offset': [0, 1.4],
-            'text-anchor': 'top',
-            'text-size': 12,
+
+    const geocoder = new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      mapboxgl,
+      placeholder: 'Search Melbourne clinics...',
+    })
+    mapInstance.addControl(geocoder)
+
+    mapInstance.on('load', () => {
+      mapInstance.addSource('clinics', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: clinics.map((c) => ({
+            type: 'Feature',
+            properties: {
+              name: c.clinicName,
+              suburb: c.suburb,
+              rating: c.rating,
+              contact: c.contact,
+            },
+            geometry: { type: 'Point', coordinates: [c.longitude, c.latitude] },
+          })),
+        },
+      })
+
+      mapInstance.loadImage(
+        'https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png',
+        (error, image) => {
+          if (error) throw error
+          if (!mapInstance.hasImage('clinic-icon')) mapInstance.addImage('clinic-icon', image)
+          mapInstance.addLayer({
+            id: 'clinic-points',
+            type: 'symbol',
+            source: 'clinics',
+            layout: {
+              'icon-image': 'clinic-icon',
+              'icon-size': 0.8,
+              'icon-allow-overlap': true,
+              'text-field': ['get', 'name'],
+              'text-offset': [0, 1.4],
+              'text-anchor': 'top',
+              'text-size': 12,
+            },
+            paint: {
+              'text-color': '#0055ff',
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 1.5,
+            },
+          })
+        },
+      )
+
+      mapInstance.on('click', 'clinic-points', (e) => {
+        const props = e.features[0].properties
+        selectedClinic.value = {
+          clinicName: props.name,
+          suburb: props.suburb,
+          rating: props.rating,
+          contact: props.contact,
+        }
+      })
+
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const userLng = pos.coords.longitude
+            const userLat = pos.coords.latitude
+            mapInstance.addSource('user-location', {
+              type: 'geojson',
+              data: {
+                type: 'FeatureCollection',
+                features: [
+                  {
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [userLng, userLat] },
+                    properties: { title: 'You are here' },
+                  },
+                ],
+              },
+            })
+            mapInstance.addLayer({
+              id: 'user-point',
+              type: 'circle',
+              source: 'user-location',
+              paint: {
+                'circle-radius': 8,
+                'circle-color': '#ff0000',
+                'circle-stroke-color': '#ffffff',
+                'circle-stroke-width': 2,
+              },
+            })
+            let minDist = Infinity
+            let nearest = null
+            clinics.forEach((c) => {
+              if (c.latitude && c.longitude) {
+                const dist = calcDistance(userLat, userLng, c.latitude, c.longitude)
+                if (dist < minDist) {
+                  minDist = dist
+                  nearest = c
+                }
+              }
+            })
+            if (nearest) nearestClinic.value = nearest
+            mapInstance.flyTo({ center: [userLng, userLat], zoom: 12 })
           },
-          paint: {
-            'text-color': '#0055ff',
-            'text-halo-color': '#ffffff',
-            'text-halo-width': 1.5,
-          },
-        })
-      },
-    )
-    mapInstance.on('click', 'clinic-points', (e) => {
-      const props = e.features[0].properties
-      selectedClinic.value = {
-        clinicName: props.name,
-        suburb: props.suburb,
-        rating: props.rating,
-        contact: props.contact,
+          () => {},
+          { enableHighAccuracy: true },
+        )
       }
     })
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const userLng = pos.coords.longitude
-          const userLat = pos.coords.latitude
-          mapInstance.addSource('user-location', {
-            type: 'geojson',
-            data: {
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  geometry: { type: 'Point', coordinates: [userLng, userLat] },
-                  properties: { title: 'You are here' },
-                },
-              ],
-            },
-          })
-          mapInstance.addLayer({
-            id: 'user-point',
-            type: 'circle',
-            source: 'user-location',
-            paint: {
-              'circle-radius': 8,
-              'circle-color': '#ff0000',
-              'circle-stroke-color': '#ffffff',
-              'circle-stroke-width': 2,
-            },
-          })
-          let minDist = Infinity
-          let nearest = null
-          clinics.forEach((c) => {
-            if (c.latitude && c.longitude) {
-              const dist = calcDistance(userLat, userLng, c.latitude, c.longitude)
-              if (dist < minDist) {
-                minDist = dist
-                nearest = c
-              }
-            }
-          })
-          if (nearest) nearestClinic.value = nearest
-          mapInstance.flyTo({ center: [userLng, userLat], zoom: 12 })
-        },
-        () => {},
-        { enableHighAccuracy: true },
-      )
-    }
-  })
+  }, 400)
 })
 </script>
 
 <template>
   <section id="main">
     <h2 class="h4 mb-3">Clinic Finder</h2>
+
     <div class="row g-2 align-items-end mb-3">
       <div class="col-12 col-md-4">
-        <label class="form-label" for="suburbInput">Suburb / Clinic name</label>
-        <input
-          id="suburbInput"
-          v-model.trim="filters.suburb"
-          class="form-control"
-          placeholder="Search by suburb or clinic name"
-        />
+        <label class="form-label">Suburb / Clinic name</label>
+        <input v-model.trim="filters.suburb" class="form-control" placeholder="Search..." />
       </div>
       <div class="col-6 col-md-3">
-        <label class="form-label" for="minRating">Min Rating</label>
-        <select id="minRating" v-model.number="filters.minRating" class="form-select">
+        <label class="form-label">Min Rating</label>
+        <select v-model.number="filters.minRating" class="form-select">
           <option :value="0">All</option>
           <option :value="4.5">4.5+</option>
           <option :value="4.7">4.7+</option>
@@ -267,8 +272,8 @@ onMounted(async () => {
         </select>
       </div>
       <div class="col-6 col-md-3">
-        <label class="form-label" for="sortBy">Sort by</label>
-        <select id="sortBy" v-model="filters.sortBy" class="form-select">
+        <label class="form-label">Sort by</label>
+        <select v-model="filters.sortBy" class="form-select">
           <option value="clinicName">Clinic Name</option>
           <option value="suburb">Suburb</option>
         </select>
@@ -319,39 +324,19 @@ onMounted(async () => {
       </ul>
     </nav>
 
-    <div id="hiddenExport" style="display: none">
-      <table class="table table-bordered">
-        <thead>
-          <tr>
-            <th>Clinic Name</th>
-            <th>Suburb</th>
-            <th>Rating</th>
-            <th>Contact</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="c in filtered" :key="c.id">
-            <td>{{ c.clinicName }}</td>
-            <td>{{ c.suburb }}</td>
-            <td>{{ c.rating }}</td>
-            <td>{{ c.contact }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
     <div id="map" class="map-container position-relative" role="application" tabindex="0">
       <div v-if="selectedClinic" class="info-card">
         <b>{{ selectedClinic.clinicName }}</b
         ><br />
         {{ selectedClinic.suburb }}<br />
-        ⭐ Rating: {{ selectedClinic.rating }}<br />
+        ⭐ {{ selectedClinic.rating }}<br />
         ☎ {{ selectedClinic.contact }}<br />
         <a
           :href="`https://www.google.com/maps/dir/?api=1&destination=${selectedClinic.clinicName},${selectedClinic.suburb}`"
           target="_blank"
-          >🚗 Open Route in Google Maps</a
         >
+          🚗 Open Route in Google Maps
+        </a>
       </div>
     </div>
 
